@@ -82,17 +82,18 @@ class DataProcessor_Conditional:
                     self.layer_U = np.zeros((size_interface[0], size_interface[1], num_inst,7))
                     self.layer_V = np.zeros((size_interface[0], size_interface[1], num_inst,7))
                     self.layer_omega = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
+                    continue
                 try:
                     jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer)
                 except:
                     continue
-                shp_curr = np.shape(jet_interface.layer_x)[1]
-                if size_interface[1]>shp_curr:
-                    self.layer_x[:, 0:shp_curr, loop_count + i,:] = jet_interface.layer_x
-                    self.layer_y[:, 0:shp_curr, loop_count + i,:] = jet_interface.layer_y
-                    self.layer_U[:, 0:shp_curr, loop_count + i,:] = jet_interface.layer_U
-                    self.layer_V[:, 0:shp_curr, loop_count + i,:] = jet_interface.layer_V
-                    self.layer_omega[:, 0:shp_curr, loop_count + i, :] = jet_interface.layer_omega
+                shp_curr = np.shape(jet_interface.layer_x)
+                if size_interface[1]>shp_curr[1]:
+                    self.layer_x[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_x
+                    self.layer_y[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_y
+                    self.layer_U[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_U
+                    self.layer_V[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_V
+                    self.layer_omega[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_omega
                 else:
                     self.layer_x[:, :, loop_count + i,:] = jet_interface.layer_x[0:size_interface[0], 0:size_interface[1],:]
                     self.layer_y[:, :, loop_count + i,:] = jet_interface.layer_y[0:size_interface[0], 0:size_interface[1],:]

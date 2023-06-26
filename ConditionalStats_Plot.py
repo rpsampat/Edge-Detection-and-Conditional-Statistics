@@ -20,7 +20,8 @@ class ConditionalStats_Plot:
         #strng = "TurbulenceStatistics_DP_baseline_otsuby1_gradientcalctest_500imgs_withvoriticity"
         #strng = "TurbulenceStatistics_DP_baseline_otsuby2_velmagsqrt_shearlayeranglemodify_overlayangleadjust_10imgs"
         try:
-            strng = "TurbulenceStatistics_DP_baseline_otsuby4_gradientcalctest_200imgs_withvoriticity_interfacecheck"
+            #strng = "TurbulenceStatistics_DP_baseline_otsuby4_gradientcalctest_200imgs_withvoriticity_interfacecheck"
+            strng = "TurbulenceStatistics_DP_baseline_otsuby8_gradientcalctest_20imgs_withvoriticity_interfacecheck_fixeddirectionality"
             file_path2 = loc + strng + '.pkl'
             with open(file_path2,'rb') as f:
                 mat = pickle.load(f)
@@ -71,9 +72,9 @@ class ConditionalStats_Plot:
                     680:"O:/JetinCoflow/15D_680rpm/"}
         leg_dict={0: 0, 375: 0.16, 680 : 0.33}
         u_coflow_dict={0: 0, 375: 3.1953, 680: 6.6}
-        key_list = [0,375,680]#,375]
-        xloc = [400]#, 100, 400, 550]  # self.DP.X_pos
-        h_win = 10  # +/- hwin
+        key_list = [0]#,375,680]#,375]
+        xloc = [150]#, 100, 400, 550]  # self.DP.X_pos
+        h_win = 50  # +/- hwin
         """fig, ax = plt.subplots()
         img = ax.imshow(np.mean(self.DP.layer_U, axis=2)[:, :, 0])
         fig.colorbar(img)"""
@@ -99,6 +100,16 @@ class ConditionalStats_Plot:
             self.u_coflow = u_coflow_dict[key]
             self.readfile()
             self.read_AvgData()
+            """shp_orig = np.shape(self.DP.layer_U)
+            self.DP.layer_U = np.reshape(self.DP.layer_U,(shp_orig[1],shp_orig[0],shp_orig[2],shp_orig[3]))
+            self.DP.layer_V = np.reshape(self.DP.layer_V,(shp_orig[1],shp_orig[0],shp_orig[2],shp_orig[3]))
+            self.DP.layer_omega = np.reshape(self.DP.layer_omega,(shp_orig[1],shp_orig[0],shp_orig[2],shp_orig[3]))
+            self.DP.xval2 = np.reshape(self.DP.xval2,(shp_orig[1],shp_orig[0],shp_orig[3]))
+            self.DP.yval2 = np.reshape(self.DP.yval2,(shp_orig[1],shp_orig[0],shp_orig[3]))
+            self.DP.U = np.reshape(self.DP.U, (shp_orig[1], shp_orig[0], shp_orig[3]))
+            self.DP.V = np.reshape(self.DP.V, (shp_orig[1], shp_orig[0], shp_orig[3]))
+            self.DP.uv_mean = np.reshape(self.DP.uv_mean, (shp_orig[1], shp_orig[0], shp_orig[3]))"""
+
             min_ind = 0
             max_ind = len(self.DP.U[0, :]) - 1
             mean_u_cond = np.mean(self.DP.layer_U, axis=2)

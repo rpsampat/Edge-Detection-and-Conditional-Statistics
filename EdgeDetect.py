@@ -9,6 +9,7 @@ from sklearn.cluster import DBSCAN,KMeans
 import InterfaceDetection
 from Settings import Settings
 from ReadPIV import ReadPIV
+from scipy.spatial import Delaunay
 
 class Edge:
 
@@ -32,8 +33,19 @@ class Edge:
         #lap_edge = cv2.convertScaleAbs(laplacian)
         otsu_threshold, otsu_image_result = cv2.threshold(img_blur, 0, 255, cv2.THRESH_TRUNC + cv2.THRESH_OTSU)
         print("Otsu=",otsu_threshold)
+
         edges = cv2.Canny(image=img_blur, threshold1=10, threshold2=otsu_threshold/1, apertureSize=3)
 
+        """edges_copy = np.copy(edges)
+        edges_copy[314,:] = 255
+        #edges_copy[0,314] = 255
+        edge_det = np.where(edges_copy == 255)
+        edge_loc = list(zip(edge_det[1],edge_det[0]))
+        tri = Delaunay(edge_loc)
+        plt.subplots()
+        plt.triplot(edge_det[1],edge_det[0],tri.simplices)
+        plt.plot(edge_det[1],edge_det[0],'o')
+        plt.show()"""
         #edge_blur = cv2.GaussianBlur(edges, (7, 7), 0)
         if plot_img == 'y':
             plt.subplots()
@@ -57,7 +69,7 @@ class Edge:
         #plt.subplots()
         for i in range(len(contours)):
             cnt = contours[i]
-            if cnt.shape[0]>20  and hierarchy[0][i][3]==-1 and hierarchy[0][i][2]==-1: # closed loop contour always has 1 child
+            if cnt.shape[0]>20:#  and hierarchy[0][i][3]==-1 and hierarchy[0][i][2]==-1: # closed loop contour always has 1 child
                 contour_long.append(cnt)
                 #img_cnt = cv2.drawContours(edges, [cnt], 0, (255, 0, 0), 1)
                 #plt.imshow(img_cnt)
@@ -86,8 +98,8 @@ class Edge:
         if plot_img == 'y':
             plt.subplots()
             for i in range(len(contour_long)):
-                if i==0 :
-                    continue
+                #if i==0 :
+                 #   continue
                     #plt.plot(edge_contour[i][:,0],edge_contour[i][:,1])
                 img_cnt = cv2.drawContours(edge_draw, [contour_long[i]], 0, (255, 0, 255), 5)
                 plt.imshow(img_cnt)
@@ -98,6 +110,7 @@ class Edge:
             plt.imshow(edges)  # ,extent = extent)
             plt.title("Edges after contour detect")
             plt.colorbar()
+            plt.show()
 
         """plt.subplots()
         img_cnt1 = cv2.drawContours(edges, [contour_long[1]], 0, (255, 0, 0), 1)
@@ -266,7 +279,7 @@ class Edge:
         otsu_threshold, otsu_image_result = cv2.threshold(img_proc0, 0, 255, cv2.THRESH_TRUNC + cv2.THRESH_OTSU)
         print("Cluster Otsu=", otsu_threshold)
         # thresholding important in this step as otherwise clusters not detected
-        img_cluster_mask = self.dbscan(img_proc0, red_level=0, dbscan_thresh=otsu_threshold/4, epsilon=3, minpts=20,plot_img=plot_img)
+        img_cluster_mask = self.dbscan(img_proc0, red_level=0, dbscan_thresh=otsu_threshold/1.5, epsilon=3, minpts=20,plot_img=plot_img)
         img_proc1 = img_cluster_mask  # img_proc0*img_cluster_mask
         if plot_img=='y':
             plt.subplots()
@@ -289,7 +302,7 @@ class Edge:
             plt.scatter(edge_loc[1][0:int(shp_edg)], edge_loc[0][0:int(shp_edg)])
             #plt.show()
 
-        return edge_loc[1][0:int(shp_edg)],edge_loc[0][0:int(shp_edg)], img_proc0,contours
+        return edge_loc[1][0:int(shp_edg)],edge_loc[0][0:int(shp_edg)], img_proc0,contours,img_proc2
 
     def arr2img(self,arr):
         max_val = np.max(arr)
@@ -310,7 +323,7 @@ class Edge:
         """
         vel_mag = np.sqrt(np.add(np.power(u, 2.0), np.power(v, 2.0)))
         #vel_mag = np.subtract(vel_mag,np.min(vel_mag))
-        x_edge, y_edge, img_proc0, contours = self.detect(vel_mag, plot_img='n')
+        x_edge, y_edge, img_proc0, contours, cluster_img = self.detect(vel_mag, plot_img='n')
         dx = xx[0,2] - xx[0,1]
         dy = yy[2,0] - yy[1,0]
         x0 = min(xx[0,:])
@@ -319,7 +332,7 @@ class Edge:
         x_edge_scale = np.array(x_edge * dx + x0)
         y_edge_scale = np.array(y_edge * dy + y0)
 
-        return x_edge_scale, y_edge_scale, img_proc0,dx,dy,x0,y0,contours
+        return x_edge_scale, y_edge_scale, img_proc0,dx,dy,x0,y0,contours,cluster_img
 
 
     def main_detect(self):

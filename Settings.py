@@ -8,7 +8,7 @@ class Settings:
         self.start_loc = -5.75  # Image cutoff limits along x axis, in mm
         self.end_loc = 61.5  # Image cutoff limits along x axis, in mm
         self.print_mean = 'y'  # y/n
-        self.num_inst = [200]  # number of images used for statistics calculation
+        self.num_inst = [10]  # number of images used for statistics calculation
         self.edgedetect = 'y'
         self.scheme = "DirectThresh"  # DirectThresh/Cumulative
         self.read_data = 'y'  # y/n

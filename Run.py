@@ -13,16 +13,16 @@ class Run:
     def main(self):
         settings = Settings.Settings()
         DP = DataProcessingConditional.DataProcessor_Conditional()
-        header = np.array(["O:/JetinCoflow/rpm0_ax15D_centerline_dt35_1000_vloc1_1mmsheet_fstop4_PIV_MP(2x24x24_75ov)_5000imgs_20D=unknown/"])
+        #header = np.array(["O:/JetinCoflow/rpm0_ax15D_centerline_dt35_1000_vloc1_1mmsheet_fstop4_PIV_MP(2x24x24_75ov)_5000imgs_20D=unknown/"])
         #header = np.array(["O:/JetinCoflow/15D_375rpm/"])
-        #header = np.array(["O:/JetinCoflow/15D_680rpm/"])
+        header = np.array(["O:/JetinCoflow/15D_680rpm/"])
         h0=header[0]
         DP.processor(settings,header)
         DA = DataAccess.DataAccess();
         #KE = KE_budget.KE_budget();
         #KE.budget(DP.U, DP.V, DP.dx, DP.dx, DP.u_rms, DP.v_rms, DP.uv_mean,settings.nu, DP.yval2, DP.xval2, DP.tke_proc, DP.tke)
         loc = DA.header_def(header[0])
-        strng = "TurbulenceStatistics_DP_baseline_otsuby4_gradientcalctest_200imgs_withvoriticity_interfacecheck_trial"#otsuby1_velmagsqrt_shearlayeranglemodify_overlayangleadjust
+        strng = "TurbulenceStatistics_DP_baseline_otsuby8_gradientcalctest_20imgs_withvoriticity_interfacecheck_fixeddirectionality"#otsuby1_velmagsqrt_shearlayeranglemodify_overlayangleadjust
 
 
         # Assuming `loc` is the directory and `strng` is the file name

@@ -82,6 +82,10 @@ class DataProcessor_Conditional:
                     self.layer_U = np.zeros((size_interface[0], size_interface[1], num_inst,7))
                     self.layer_V = np.zeros((size_interface[0], size_interface[1], num_inst,7))
                     self.layer_omega = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
+                    self.layer_uderivx = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
+                    self.layer_uderivy = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
+                    self.layer_vderivx = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
+                    self.layer_vderivy = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
                     continue
                 try:
                     jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer)
@@ -94,12 +98,24 @@ class DataProcessor_Conditional:
                     self.layer_U[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_U
                     self.layer_V[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_V
                     self.layer_omega[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_omega
+                    self.layer_uderivx[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_uderivx
+                    self.layer_uderivy[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_uderivy
+                    self.layer_vderivx[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_vderivx
+                    self.layer_vderivy[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_vderivy
                 else:
                     self.layer_x[:, :, loop_count + i,:] = jet_interface.layer_x[0:size_interface[0], 0:size_interface[1],:]
                     self.layer_y[:, :, loop_count + i,:] = jet_interface.layer_y[0:size_interface[0], 0:size_interface[1],:]
                     self.layer_U[:, :, loop_count + i,:] = jet_interface.layer_U[0:size_interface[0], 0:size_interface[1],:]
                     self.layer_V[:, :, loop_count + i,:] = jet_interface.layer_V[0:size_interface[0], 0:size_interface[1],:]
                     self.layer_omega[:, :, loop_count + i, :] = jet_interface.layer_omega[0:size_interface[0],
+                                                            0:size_interface[1], :]
+                    self.layer_uderivx[:, :, loop_count + i, :] = jet_interface.layer_uderivx[0:size_interface[0],
+                                                            0:size_interface[1], :]
+                    self.layer_uderivy[:, :, loop_count + i, :] = jet_interface.layer_uderivy[0:size_interface[0],
+                                                            0:size_interface[1], :]
+                    self.layer_vderivx[:, :, loop_count + i, :] = jet_interface.layer_vderivx[0:size_interface[0],
+                                                            0:size_interface[1], :]
+                    self.layer_vderivy[:, :, loop_count + i, :] = jet_interface.layer_vderivy[0:size_interface[0],
                                                             0:size_interface[1], :]
             loop_count = loop_count + num_imgs[h]
         U_cond = np.mean(self.layer_U, axis=2)

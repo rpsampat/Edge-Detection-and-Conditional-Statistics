@@ -184,7 +184,7 @@ def ke_budget_terms(U,V,uprime,vprime,dx,dy,U_inst,V_inst,omega_inst):
 
     dUdx, dUdy, dUdz, d2Udx2, d2Udy2, d2Udz2, d2Udxdy, d2Udxdz, d2Udydz = derivatives_inst(U_inst, dx, dy)
     dVdx, dVdy, dVdz, d2Vdx2, d2Vdy2, d2Vdz2, d2Vdxdy, d2Vdxdz, d2Vdydz = derivatives_inst(V_inst, dx, dy)
-    Omega_mean = np.mean(omega_inst,axis=2)
+    Omega_mean = np.mean((omega_inst),axis=2)
     Omeage_modulus_mean = np.mean(np.abs(dVdx - dUdy),axis=2)
     # Subtraction by Broadcasting. Taking transpose becomes essential to subtract a mean matrix from a 3D dataset.
     omega = np.transpose(omega_inst)#(dVdx-dUdy)

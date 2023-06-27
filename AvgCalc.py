@@ -19,6 +19,7 @@ class AvgCalc:
         header_size = len(header)
         for i in range(header_size):
             loc = DA.header_def(header[i])
+            print(loc)
             if i == 0:
                 Avg_samp = np.loadtxt(loc + 'B00001.dat', skiprows=3)
                 s_avg = Avg_samp.shape

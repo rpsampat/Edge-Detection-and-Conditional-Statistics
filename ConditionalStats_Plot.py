@@ -21,12 +21,12 @@ class ConditionalStats_Plot:
         #strng = "TurbulenceStatistics_DP_baseline_otsuby2_velmagsqrt_shearlayeranglemodify_overlayangleadjust_10imgs"
         try:
             #strng = "TurbulenceStatistics_DP_baseline_otsuby4_gradientcalctest_200imgs_withvoriticity_interfacecheck"
-            strng = "TurbulenceStatistics_DP_baseline_otsuby4_gradientcalctest_100imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2"
+            strng = "TurbulenceStatistics_DP_baseline_otsuby8_gradientcalctest_100imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2_unsmoothinput"
             file_path2 = loc + strng + '.pkl'
             with open(file_path2,'rb') as f:
                 mat = pickle.load(f)
         except:
-            strng = "TurbulenceStatistics_DP_baseline_otsuby1.5_gradientcalctest_100imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2"
+            strng = "TurbulenceStatistics_DP_baseline_otsuby4_gradientcalctest_100imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2"
             file_path2 = loc + strng + '.pkl'
             with open(file_path2, 'rb') as f:
                 mat = pickle.load(f)
@@ -72,9 +72,9 @@ class ConditionalStats_Plot:
                     680:"O:/JetinCoflow/15D_680rpm/"}
         leg_dict={0: 0, 375: 0.16, 680 : 0.33}
         u_coflow_dict={0: 0, 375: 3.1953, 680: 6.6}
-        key_list = [0,375,680]#,375,680]#,375]
-        xloc = [100]#,,680 100, 400, 550]  # self.DP.X_pos
-        h_win = 20  # +/- hwin
+        key_list = [0]#,375,680]#,375]
+        xloc = [200]#,,680 100, 400, 550]  # self.DP.X_pos
+        h_win = 10  # +/- hwin
         """fig, ax = plt.subplots()
         img = ax.imshow(np.mean(self.DP.layer_U, axis=2)[:, :, 0])
         fig.colorbar(img)"""
@@ -114,8 +114,8 @@ class ConditionalStats_Plot:
             max_ind = len(self.DP.U[0, :]) - 1
             mean_u_cond = np.mean(self.DP.layer_U, axis=2)
             mean_v_cond = np.mean(self.DP.layer_V, axis=2)
-            uprime_cond = self.DP.layer_U
-            vprime_cond = self.DP.layer_V
+            uprime_cond = np.array(self.DP.layer_U)
+            vprime_cond = np.array(self.DP.layer_V)
             shp_set = np.shape(self.DP.layer_U)
             for prime_ind in range(shp_set[2]):
                 uprime_cond[:, :, prime_ind, :] = np.subtract(self.DP.layer_U[:, :, prime_ind, :], mean_u_cond)
@@ -128,9 +128,13 @@ class ConditionalStats_Plot:
             uprime_rms = np.sqrt(np.mean(uprime_rms, axis=2))
             dx = self.X[1, 2] - self.X[1, 1]
             dy = dx
+            plt.subplots()
+            plt.imshow(np.mean(np.mean(self.DP.layer_U[:, 80:140,:, :], axis=2),axis=1))
             if vorticity_plot_opt == 'y':
-                K_td, K_t, K_nu, K_nu_t, K_adv,enstrophy,vorticity, vorticity_mod, enstrophy_flux = KE.ke_budget_terms(mean_u_cond, mean_v_cond, uprime_cond, vprime_cond, dx,
-                                                                dy,self.DP.layer_U,self.DP.layer_V,self.DP.layer_omega[:,:,:,0])
+                #K_td, K_t, K_nu, K_nu_t, K_adv,enstrophy,vorticity, vorticity_mod, enstrophy_flux = KE.ke_budget_terms(mean_u_cond, mean_v_cond, uprime_cond, vprime_cond, dx,
+                 #                                               dy,self.DP.layer_U,self.DP.layer_V,self.DP.layer_omega[:,:,:,0])
+                K_td, K_t, K_nu, K_nu_t, K_adv, enstrophy, vorticity, vorticity_mod, enstrophy_flux = KE.ke_budget_terms_svg_input(
+                    dx,dy, self.DP.layer_U, self.DP.layer_V, self.DP.layer_omega[:, :, :, int(shp_set[3]/2)])
                 #K_td, K_t, K_nu, K_nu_t, K_adv, omega, Omega_mean, Omeage_modulus_mean, enstrophy_flux
             mrkr_size = 10
             for i in range(len(xloc)):
@@ -146,9 +150,9 @@ class ConditionalStats_Plot:
                 else:
                     pass
 
-                Uplot = np.mean(self.DP.U[:, start_ind:stop_ind, 0], axis=1)
-                yval = np.mean(self.DP.yval2[:, start_ind:stop_ind, 0], axis=1)
-                xval = np.mean(self.DP.xval2[:, start_ind:stop_ind, 0], axis=1)
+                Uplot = np.mean(self.DP.U[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
+                yval = np.mean(self.DP.yval2[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
+                xval = np.mean(self.DP.xval2[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
                 ind_center = int(np.floor(len(yval) / 2))
                 x_center = xval[ind_center]
                 y_center = yval[ind_center]
@@ -157,14 +161,18 @@ class ConditionalStats_Plot:
                 Ucenter = np.max((self.U[:, avg_ind]))  # ,axis=1))
                 # X_plot = np.mean(self.DP.layer_y,axis=2)
                 # X_plot = np.mean(X_plot[:,start_ind:stop_ind],axis=1)/self.settings.nozzle_dia
-                Vplot = np.mean(self.DP.V[:, start_ind:stop_ind, 0], axis=1)
-                RSSplot = np.mean(self.DP.uv_mean[:, start_ind:stop_ind, 0], axis=1)
+                Vplot = np.mean(self.DP.V[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
+                RSSplot = np.mean(self.DP.uv_mean[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
 
                 fact_loc = np.sign(np.linspace(0, len(Uplot) - 1, len(Uplot)) - ind_center)
                 xplot = (fact_loc * np.sqrt(np.power(xval - x_center, 2.0) + np.power(yval - y_center, 2.0))) / (
                         self.settings.nozzle_dia * 1000)
 
-                uprime_plot = np.mean(uprime_rms[:, start_ind:stop_ind, 0], axis=1)
+                fact_loc_deriv = np.sign(np.linspace(0, len(Uplot[1:-1]) - 1, len(Uplot[1:-1])) - ind_center)
+                xplot_deriv = (fact_loc_deriv * np.sqrt(np.power(xval[1:-1] - x_center, 2.0) + np.power(yval[1:-1] - y_center, 2.0))) / (
+                        self.settings.nozzle_dia * 1000)
+
+                uprime_plot = np.mean(uprime_rms[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
                 if vorticity_plot_opt == 'y':
                     K_td_plot = np.mean(K_td[:, start_ind:stop_ind], axis=1)
                     K_t_plot = np.mean(K_t[:, start_ind:stop_ind], axis=1)
@@ -174,10 +182,10 @@ class ConditionalStats_Plot:
 
                     enstrophy_plot = np.mean(enstrophy[:, start_ind:stop_ind], axis=1)
                     vorticity_plot = np.mean(vorticity[:, start_ind:stop_ind], axis=1)
-                    vorticity_mod_plot = np.mean(vorticity_mod[:, start_ind:stop_ind], axis=1)
+                    #vorticity_mod_plot = np.mean(vorticity_mod[:, start_ind:stop_ind], axis=1)
                     enstrophy_flux_plot = np.mean(enstrophy_flux[:, start_ind:stop_ind], axis=1)
                 denom_fact = (Ucenter - self.u_coflow)
-                denom_fact_ke = (Ucenter - self.u_coflow) ** 3.0#(Ucenter) ** 3.0#
+                denom_fact_ke = 1.0#(Ucenter - self.u_coflow) ** 3.0#(Ucenter) ** 3.0#
 
                 ax.scatter(xplot, (Uplot- self.u_coflow) / denom_fact,
                            s=mrkr_size)  # np.linspace(0,len(Uplot)-1,len(Uplot))
@@ -201,23 +209,23 @@ class ConditionalStats_Plot:
                     ax4.set_ylabel('u\' (m2/s2)')
                     ax4.set_xlabel('r/D')
 
-                    ax5.scatter(xplot, K_t_plot / denom_fact_ke, s=mrkr_size)
+                    ax5.scatter(xplot_deriv, K_t_plot / denom_fact_ke, s=mrkr_size)
                     ax5.set_ylabel('KE turbulent transport')
                     ax5.set_xlabel('r/D')
 
-                    ax6.scatter(xplot, K_td_plot / denom_fact_ke, s=mrkr_size)
+                    ax6.scatter(xplot_deriv, K_td_plot / denom_fact_ke, s=mrkr_size)
                     ax6.set_ylabel('KE turbulent loss')
                     ax6.set_xlabel('r/D')
 
-                    ax7.scatter(xplot, K_nu_plot / denom_fact_ke, s=mrkr_size)
+                    ax7.scatter(xplot_deriv, K_nu_plot / denom_fact_ke, s=mrkr_size)
                     ax7.set_ylabel('KE Viscous loss')
                     ax7.set_xlabel('r/D')
 
-                    ax8.scatter(xplot, K_nu_t_plot / denom_fact_ke, s=mrkr_size)
+                    ax8.scatter(xplot_deriv, K_nu_t_plot / denom_fact_ke, s=mrkr_size)
                     ax8.set_ylabel('KE Viscous transport')
                     ax8.set_xlabel('r/D')
 
-                    ax9.scatter(xplot, K_adv_plot / denom_fact_ke, s=mrkr_size)
+                    ax9.scatter(xplot_deriv, K_adv_plot / denom_fact_ke, s=mrkr_size)
                     ax9.set_ylabel('KE Advective transport')
                     ax9.set_xlabel('r/D')
 
@@ -230,9 +238,9 @@ class ConditionalStats_Plot:
                     ax11.set_ylabel('-Vorticity')
                     ax11.set_xlabel('r/D')
 
-                    ax12.scatter(xplot, vorticity_mod_plot, s=mrkr_size)
+                    """"ax12.scatter(xplot, vorticity_mod_plot, s=mrkr_size)
                     ax12.set_ylabel('Vorticity Modulus')
-                    ax12.set_xlabel('r/D')
+                    ax12.set_xlabel('r/D')"""
 
                     ax13.scatter(xplot, enstrophy_flux_plot, s=mrkr_size)
                     ax13.set_ylabel('Enstrophy Flux')

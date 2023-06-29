@@ -70,6 +70,7 @@ class DataProcessor_Conditional:
         ens = Ensemble.Ensemble()
         header_size = header.shape
         loop_count = 0
+        win_size = 5
         for h in range(header_size[0]):
             for i in range(num_imgs[h]):
                 S = VD.data_matrix(i, meanU.shape, settings.start_loc, AC, header[h])
@@ -77,15 +78,15 @@ class DataProcessor_Conditional:
                     jet_interface = InterfaceDetection.InterfaceDetection(meanU, settings.shear_num, settings.m_x_loc)
                     jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer)
                     size_interface = jet_interface.layer_x.shape
-                    self.layer_x = np.zeros((size_interface[0], size_interface[1], num_inst,7))
-                    self.layer_y = np.zeros((size_interface[0], size_interface[1], num_inst,7))
-                    self.layer_U = np.zeros((size_interface[0], size_interface[1], num_inst,7))
-                    self.layer_V = np.zeros((size_interface[0], size_interface[1], num_inst,7))
-                    self.layer_omega = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
-                    self.layer_uderivx = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
-                    self.layer_uderivy = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
-                    self.layer_vderivx = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
-                    self.layer_vderivy = np.zeros((size_interface[0], size_interface[1], num_inst, 7))
+                    self.layer_x = np.zeros((size_interface[0], size_interface[1], num_inst,win_size))
+                    self.layer_y = np.zeros((size_interface[0], size_interface[1], num_inst,win_size))
+                    self.layer_U = np.zeros((size_interface[0], size_interface[1], num_inst,win_size))
+                    self.layer_V = np.zeros((size_interface[0], size_interface[1], num_inst,win_size))
+                    self.layer_omega = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))
+                    self.layer_uderivx = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))
+                    self.layer_uderivy = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))
+                    self.layer_vderivx = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))
+                    self.layer_vderivy = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))
                     continue
                 try:
                     jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer)
@@ -145,10 +146,10 @@ class DataProcessor_Conditional:
         yloc_autcorr = [5, 10, 15, 20]
         for i in range(num_inst):
             i
-            X = self.layer_x[:, :, i]
-            Y = self.layer_y[:, :, i]
-            U_interf = self.layer_U[:, :, i]
-            V_interf = self.layer_V[:, :, i]
+            X = np.array(self.layer_x[:, :, i])
+            Y = np.array(self.layer_y[:, :, i])
+            U_interf = np.array(self.layer_U[:, :, i])
+            V_interf = np.array(self.layer_V[:, :, i])
             TF = TurbulenceField.TurbulenceField(U_interf, V_interf, U_cond, V_cond, X, Y)
             """if i == 0:
                 tke = TKE_budget.TKE_budget(U_cond.shape)

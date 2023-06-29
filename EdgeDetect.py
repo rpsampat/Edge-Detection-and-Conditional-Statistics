@@ -280,7 +280,7 @@ class Edge:
         otsu_threshold, otsu_image_result = cv2.threshold(img_proc0, 0, 255, cv2.THRESH_TRUNC + cv2.THRESH_OTSU)
         print("Cluster Otsu=", otsu_threshold)
         # thresholding important in this step as otherwise clusters not detected
-        img_cluster_mask = self.dbscan(img_proc0, red_level=0, dbscan_thresh=otsu_threshold/1, epsilon=3, minpts=20,plot_img=plot_img)
+        img_cluster_mask = self.dbscan(img_proc0, red_level=0, dbscan_thresh=otsu_threshold/8, epsilon=3, minpts=20,plot_img=plot_img)
         img_proc1 = img_cluster_mask  # img_proc0*img_cluster_mask
         if plot_img=='y':
             plt.subplots()
@@ -323,11 +323,9 @@ class Edge:
         :return:
         """
         vel_mag = np.sqrt(np.add(np.power(u, 2.0), np.power(v, 2.0)))
-        u_derivy, u_derivx = sgolay2d(u, window_size=5, order=2, derivative='both')
-        v_derivy, v_derivx = sgolay2d(v, window_size=5, order=2, derivative='both')
-        omega = np.abs(v_derivx - u_derivy)
+
         #vel_mag = np.subtract(vel_mag,np.min(vel_mag))
-        x_edge, y_edge, img_proc0, contours, cluster_img = self.detect(omega, plot_img='n')
+        x_edge, y_edge, img_proc0, contours, cluster_img = self.detect(vel_mag, plot_img='n')
         dx = xx[0,2] - xx[0,1]
         dy = yy[2,0] - yy[1,0]
         x0 = min(xx[0,:])

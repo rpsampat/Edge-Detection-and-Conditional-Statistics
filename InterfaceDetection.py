@@ -19,15 +19,16 @@ class InterfaceDetection:
 
 
     def Detect(self, u, v, x, y, layer):
-        plot_img='y'
+        plot_img='n'
+        win_cond=5# size of window to be used for Savitsky Golay 2D filtering on extracted conditional data
         edge = EdgeDetect.Edge()
-        u_sg = sgolay2d(u, window_size=5, order=2)
-        v_sg = sgolay2d(v, window_size=5, order=2)
+        #u_sg = sgolay2d(u, window_size=5, order=2)
+        #v_sg = sgolay2d(v, window_size=5, order=2)
         u_derivy, u_derivx = sgolay2d(u, window_size=5, order=2,derivative='both')
         v_derivy, v_derivx = sgolay2d(v, window_size=5, order=2,derivative='both')
         omega = v_derivx-u_derivy
-        u = u_sg
-        v= v_sg
+        #u = u_sg
+        #v= v_sg
         X_I, Y_I, img_proc0,dx,dy,x0,y0, contours, cluster_img = edge.data_detect(u,v,x,y)
         print("Y_I shape=",np.shape(Y_I))
         m,X_out,Y_out,grad2 = self.edge_slope((X_I-x0)/dx,(Y_I-y0)/dy,contours,dx,dy,x0,y0)
@@ -64,7 +65,7 @@ class InterfaceDetection:
         #self.plot_interface(v, y[:, 0], X_I, Y_I)
         dx_cond = dx/2.0
         dy_cond = dy/2.0
-        self.ShearLayer(X_out, Y_out,m,grad2,x, y, u, v,dx_cond,dy_cond,x0,y0,cluster_img,omega,u_derivy,u_derivx,v_derivy, v_derivx)
+        self.ShearLayer(X_out, Y_out,m,grad2,x, y, u, v,dx_cond,dy_cond,x0,y0,cluster_img,omega,u_derivy,u_derivx,v_derivy, v_derivx, win_cond)
         print('Max u=',np.max(u))
 
         if plot_img=='y':
@@ -260,6 +261,13 @@ class InterfaceDetection:
 
         return x, y
 
+    def neighbour_line_search(self,x1,y1,dy,slope,win_cond,cond_pts):
+        win_pts = range(win_cond)
+        val = cond_pts(win_pts, slope, dy, x1, y1, win_cond)
+        val = np.stack(val)
+        return val
+
+
     def neighbours(self,dx,dy,x1,y1,slope_x,slope,search_pt_vect,neighbour_search_vect):
         val = neighbour_search_vect(x1,y1,dx,dy,slope,slope_x,search_pt_vect)
 
@@ -292,7 +300,7 @@ class InterfaceDetection:
 
         return u1u1, u1u2,u1u3,u2u1,u2u2,u2u3,u3u1,u3u2,u3u3
 
-    def edge_loc_iter(self,m1,grad2,x1,y1,dx,dy,search_pt_vect,neighbour_search_vect):
+    def edge_loc_iter(self,m1,x1,y1,dy,win_cond):
         # Iterating of locations of detected edge
         m1_samp = m1
         if m1_samp == 0.0:
@@ -306,17 +314,25 @@ class InterfaceDetection:
         # c1 = c[TI_i]
         invalid = 0
         dminmax = (self.shear_num / 2.0) * dy
-        cond_pts = np.vectorize(self.conditional_points)
+        cond_pts = np.vectorize(self.conditional_points,otypes=[object])
         shear_thickness = range(self.shear_num)
-        x2, y2 = cond_pts(shear_thickness, m2,grad2, dy, x1, y1)
-        val_neighb = self.neighbours(dx, dy, x2, y2, m1, m2, search_pt_vect,
+        win_size = self.shear_num
+        val_x_y = cond_pts(shear_thickness, m2, dy, x1, y1,win_size)
+        val_x_y=np.stack(val_x_y)
+        x2 = val_x_y[:,0]
+        y2 = val_x_y[:, 1]
+        """val_neighb = self.neighbours(dx, dy, x2, y2, m1, m2, search_pt_vect,
                                      neighbour_search_vect)  # search_pt_vect(x2, y2, dx, slope_x, 1)
         val_neighb = np.stack(val_neighb)
         val_neighb_xy1 = np.stack([val_neighb[:,0,0],val_neighb[:,1,2]],axis=1) #xy+dxy
         val_neighb_xy2 = np.stack([val_neighb[:, 0, 1], val_neighb[:, 1, 3]], axis=1) #xy-dxy
         val_neighb = np.dstack((val_neighb,val_neighb_xy1,val_neighb_xy2))
         x_val = np.hstack((x2.reshape(self.shear_num, 1), val_neighb[:, 0, :]))
-        y_val = np.hstack((y2.reshape(self.shear_num, 1), val_neighb[:, 1, :]))
+        y_val = np.hstack((y2.reshape(self.shear_num, 1), val_neighb[:, 1, :]))"""
+
+        neighb_line_vect = np.vectorize(self.neighbour_line_search,otypes=[object],excluded=['dy','slope','win_cond','cond_pts'])
+        val_neighb_line = neighb_line_vect(x1 = x2, y1 = y2, dy = dy, slope = m1, win_cond = win_cond, cond_pts = cond_pts)
+        val_neighb_line = np.stack(val_neighb_line)
         # Interpolating base on neighbours
 
         """u_val = interp_u(x2, y2)
@@ -331,7 +347,7 @@ class InterfaceDetection:
         v_val = np.hstack((v_val.reshape(self.shear_num, 1), v_val_neighb))
         omega_val = np.hstack((omega_val.reshape(self.shear_num, 1), omega_val_neighb))"""
 
-        return np.stack((x_val,y_val))#,u_val,v_val,omega_val))
+        return val_neighb_line#,u_val,v_val,omega_val))#np.stack((x_val,y_val)),
 
     def point_distance(self,point_x,point_y,X_I,Y_I,dx):
         """
@@ -346,10 +362,10 @@ class InterfaceDetection:
         dist = (X_I-point_x)**2.0+(Y_I-point_y)**2.0
         check = np.logical_or(dist<(dx*0.8)**2.0,dist==0)
         return np.sum(check)
-    def conditional_points(self,TI_j,m2,grad2,dy,x1,y1):
+    def conditional_points(self,TI_j,m2,dy,x1,y1,win_size):
         # Iterating over thickness of shear layer defined
-        d = np.abs(self.shear_num / 2 + 1 - TI_j) * dy  # distance from edge
-        fact = (-self.shear_num / 2) + TI_j - 1  # factor accounting for being on either side of edge
+        d = np.abs(win_size / 2 + 1 - TI_j) * dy  # distance from edge
+        fact = (-win_size / 2) + TI_j - 1  # factor accounting for being on either side of edge
         if fact == 0.0:
             fact = 0.0
             x2 = x1
@@ -377,9 +393,8 @@ class InterfaceDetection:
 
         return x2, y2
 
-    def ShearLayer(self, X_I, Y_I,m,grad2,x, y, u, v,dx,dy,x0,y0,cluster_img,omega,u_derivy,u_derivx,v_derivy, v_derivx):
+    def ShearLayer(self, X_I, Y_I,m,grad2,x, y, u, v,dx,dy,x0,y0,cluster_img,omega,u_derivy,u_derivx,v_derivy, v_derivx, win_cond):
         edge_length = len(Y_I) #len(x[0,:])
-        Shear_layer = np.zeros((self.shear_num, edge_length, 5,7))
         self.skipped_lines_sub = []
 
         self.u_inter = u
@@ -400,42 +415,33 @@ class InterfaceDetection:
         #plt.yscale('log')
         plt.subplots()
         plt.scatter(X_I,Y_I)"""
-        edge_instance = np.zeros(edge_length)
-        x_ind_rec=[]
-
-        x_search = np.array(x)
-        y_search = np.array(y)
-        Shear_layer_temp = np.zeros((self.shear_num, 5, 7))
-        edge_instance_temp = np.zeros(edge_length)
-        input_arr = list(zip(np.ndarray.flatten(x),np.ndarray.flatten(y)))
-        #interp_u = LinearNDInterpolator(input_arr,np.ndarray.flatten(u))
-        #interp_v = LinearNDInterpolator(input_arr,np.ndarray.flatten(v))
-        #interp_omega = LinearNDInterpolator(input_arr, np.ndarray.flatten(omega))
-        shear_thickness= range(self.shear_num)
-        edge_loc_iter_vect = np.vectorize(self.edge_loc_iter,otypes=[object])#,excluded=['x','y','u','v','dx','dy','search_pt_vect','neighbour_search_vect'])
+        edge_loc_iter_vect = np.vectorize(self.edge_loc_iter,otypes=[object],excluded=['dy','win_cond'])#,excluded=['x','y','u','v','dx','dy','search_pt_vect','neighbour_search_vect'])
         search_pt_vect = np.vectorize(self.search_points)
         neighbour_search_vect = np.vectorize(self.neighbour_search, otypes=[object])
-        val = edge_loc_iter_vect(m1,grad2,X_I,Y_I,dx,dy,search_pt_vect,neighbour_search_vect)
+        val= edge_loc_iter_vect(m1 =m1,x1 = X_I,y1 = Y_I,dy = dy,win_cond = win_cond)
         val = np.stack(val)
         xmax = np.max(x)
         xmin = np.min(x)
         ymax = np.max(y)
         ymin = np.min(y)
         point_dist = np.vectorize(self.point_distance,otypes=[object], excluded=['X_I','Y_I','dx'])
-        pts = point_dist(val[:, 0, :, 0],val[:, 1, :, 0],X_I=np.array(X_I),Y_I=np.array(Y_I),dx=dx)
+        #pts = point_dist(val[:, 0, :, 0],val[:, 1, :, 0],X_I=np.array(X_I),Y_I=np.array(Y_I),dx=dx)
+        pts = point_dist(point_x = val[:, :, int(win_cond/2), 0], point_y = val[:, :, int(win_cond/2), 1], X_I=np.array(X_I), Y_I=np.array(Y_I), dx=dx)
         pts = np.stack(pts)
         pts[:,int(self.shear_num/2.0)] = np.zeros((np.shape(pts)[0]))
         print("Pts shape=",np.shape(pts))
         pts = np.sum(pts,axis=1)
         pts_valid = np.where(pts<2)[0]
-        condition1 = np.logical_or(val[:, 0, :, :] > xmax, val[:, 0, :, :] < xmin)
+        x_coords = val[:, :, :, 0]#val[:, 0, :, :]
+        y_coords = val[:, :, :, 1]  # val[:, 1, :, :]
+        condition1 = np.logical_or(x_coords > xmax, x_coords < xmin)
         condition1= np.sum(np.sum(condition1,axis=1),axis=1)
-        condition2 = np.logical_or(val[:, 1, :, :] > ymax, val[:, 1, :, :] < ymin)
+        condition2 = np.logical_or(y_coords > ymax, y_coords < ymin)
         condition2 = np.sum(np.sum(condition2, axis=1), axis=1)
         condition3 = condition1+condition2
         valid_interp = np.intersect1d(np.where(condition3==0)[0],pts_valid)
-        x_val_interp = val[valid_interp,0,:,:]
-        y_val_interp = val[valid_interp,1,:,:]
+        x_val_interp = x_coords[valid_interp,:,:]#val[valid_interp,0,:,:]
+        y_val_interp = y_coords[valid_interp,:,:]#val[valid_interp,1,:,:]
         shp_val = np.shape(x_val_interp)
         interp_pts = list(zip(np.ndarray.flatten(x_val_interp), np.ndarray.flatten(y_val_interp)))
         #interp_pts = list(zip(val[:, 0, :, :], val[:, 1, :, :]))

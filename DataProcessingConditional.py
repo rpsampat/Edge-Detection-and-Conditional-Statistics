@@ -141,7 +141,7 @@ class DataProcessor_Conditional:
         AC_cond.V = V_cond
         AC_cond.X = X_cond
         AC_cond.Y = Y_cond
-        AC_cond.gradients_calc()
+        #AC_cond.gradients_calc()
         self.X_plot = AC_cond.x_location(settings)
         self.Y_plot = jet_interface.Y_plot * self.dx / settings.nozzle_dia
         self.X_pos = AC_cond.X_pos

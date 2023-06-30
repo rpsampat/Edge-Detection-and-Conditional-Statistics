@@ -1,5 +1,6 @@
 import DataAccess
-
+import numpy as np
+from matrix_build import matrix_build
 class AvgCalc:
     def __init__(self, num_tot, start_loc, end_loc, calc_avg, interface_detect, header):
         self.NumImgs = num_tot

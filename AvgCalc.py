@@ -6,13 +6,9 @@ class AvgCalc:
     def __init__(self, num_tot, start_loc, end_loc, calc_avg, interface_detect, header):
         self.NumImgs = num_tot
         DA = DataAccess.DataAccess()
-        """if interface_detect == 'y':
-            self.AvgAssemInterface(header, DA)
-        elif calc_avg == 'y':
-            self.AvgAssem(header, DA)"""
         loc = DA.header_def(header[0])
-        self.AvgMat(start_loc, end_loc, loc, header, DA)
-        self.gradients_calc()
+        self.AvgMat(start_loc, end_loc, loc, header, DA,calc_avg)
+        #self.gradients_calc()
         #self.isValid=None
 
     def AvgAssem(self, header, DA):
@@ -79,12 +75,15 @@ class AvgCalc:
                            f'{Avg_mat_res[iter, 3]} {Avg_mat_res[iter, 4]} {Stdev_mat_res[iter, 2]} '
                            f'{Stdev_mat_res[iter, 3]} {RSS[iter]}\n')
 
-    def AvgMat(self, start_loc, end_loc, loc,header,DA):
+    def AvgMat(self, start_loc, end_loc, loc,header,DA,calc_Avg):
         try:
             Avg_mat = np.loadtxt(loc + 'Avg_mat.dat')
         except:
-            self.AvgAssem(header, DA)
-            Avg_mat = np.loadtxt(loc + 'Avg_mat.dat')
+            if calc_Avg=='y':
+                self.AvgAssem(header, DA)
+                Avg_mat = np.loadtxt(loc + 'Avg_mat.dat')
+            else:
+                Avg_mat = np.loadtxt(loc + 'Avg_mat.dat')
         self.isValid = np.where(Avg_mat[:, 4] > 0)[0]
         Avg_mat_res = Avg_mat[self.isValid, :]
         x_avg = Avg_mat_res[:, 0]

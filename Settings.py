@@ -8,14 +8,14 @@ class Settings:
         self.start_loc = -5.75  # Image cutoff limits along x axis, in mm
         self.end_loc = 61.5  # Image cutoff limits along x axis, in mm
         self.print_mean = 'y'  # y/n
-        self.num_inst = [100]  # number of images used for statistics calculation
+        self.num_inst = [1,1]  # number of images used for statistics calculation
         self.edgedetect = 'y'
         self.scheme = "DirectThresh"  # DirectThresh/Cumulative
         self.read_data = 'y'  # y/n
         self.shear_calc = 'y'  # y/n
         self.LEA = 'y'  # y/n
         self.layer = "up"  # low/up
-        self.shear_num = 60  # number of points in shear layer
+        self.shear_num = 61  # number of points in shear layer
         self.m_x_loc = 6  # number of x locations to check within each image
         self.n_y_loc = 10  # number of y locations to check within each image
         self.x_img = 10  # mm

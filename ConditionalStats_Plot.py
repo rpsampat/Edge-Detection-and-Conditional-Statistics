@@ -21,12 +21,12 @@ class ConditionalStats_Plot:
         #strng = "TurbulenceStatistics_DP_baseline_otsuby2_velmagsqrt_shearlayeranglemodify_overlayangleadjust_10imgs"
         try:
             #strng = "TurbulenceStatistics_DP_baseline_otsuby4_gradientcalctest_200imgs_withvoriticity_interfacecheck"
-            strng = "TurbulenceStatistics_DP_baseline_otsuby8_gradientcalctest_100imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2_unsmoothinput"
+            strng = "TurbulenceStatistics_DP_tkebasis_otsuby8_gradientcalctest_100imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2_unsmoothinput"
             file_path2 = loc + strng + '.pkl'
             with open(file_path2,'rb') as f:
                 mat = pickle.load(f)
         except:
-            strng = "TurbulenceStatistics_DP_baseline_otsuby4_gradientcalctest_100imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2"
+            strng = "TurbulenceStatistics_DP_baseline_otsuby1.5_gradientcalctest_100imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2"
             file_path2 = loc + strng + '.pkl'
             with open(file_path2, 'rb') as f:
                 mat = pickle.load(f)
@@ -72,9 +72,9 @@ class ConditionalStats_Plot:
                     680:"O:/JetinCoflow/15D_680rpm/"}
         leg_dict={0: 0, 375: 0.16, 680 : 0.33}
         u_coflow_dict={0: 0, 375: 3.1953, 680: 6.6}
-        key_list = [0]#,375,680]#,375]
-        xloc = [200]#,,680 100, 400, 550]  # self.DP.X_pos
-        h_win = 10  # +/- hwin
+        key_list = [0,680]#,375,680]#,375]
+        xloc = [50]#,,680 100, 400, 550]  # self.DP.X_pos
+        h_win = 5  # +/- hwin
         """fig, ax = plt.subplots()
         img = ax.imshow(np.mean(self.DP.layer_U, axis=2)[:, :, 0])
         fig.colorbar(img)"""
@@ -149,19 +149,21 @@ class ConditionalStats_Plot:
                     stop_ind = ind
                 else:
                     pass
-
-                Uplot = np.mean(self.DP.U[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
+                Uplot = np.mean(np.mean(self.DP.layer_U[:, start_ind:stop_ind, :, int(shp_set[3]/2)],axis = 2), axis=1)
                 yval = np.mean(self.DP.yval2[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
                 xval = np.mean(self.DP.xval2[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
+                xval_arr = self.DP.xval2[int(shp_set[0]/2), start_ind:stop_ind, int(shp_set[3]/2)]
+                xloc_avg = [np.where(self.X[0, :] <= x_ind)[0][-1] for x_ind in xval_arr]
+                ucoflow = np.mean(np.mean(self.U[-2:-1,xloc_avg],axis=0),axis=0)
                 ind_center = int(np.floor(len(yval) / 2))
                 x_center = xval[ind_center]
                 y_center = yval[ind_center]
-                avg_ind = np.where(self.X[1, :] >= x_center)[0][0]
-                xplot_avg = np.mean(self.Y[:, avg_ind])  # ,axis=1)
-                Ucenter = np.max((self.U[:, avg_ind]))  # ,axis=1))
+                #avg_ind = np.where(self.X[1, :] >= x_center)[0][0]
+                #xplot_avg = np.mean(self.Y[:, avg_ind])  # ,axis=1)
+                Ucenter = np.max(np.mean(self.U[:,xloc_avg],axis=1))  # ,axis=1))
                 # X_plot = np.mean(self.DP.layer_y,axis=2)
                 # X_plot = np.mean(X_plot[:,start_ind:stop_ind],axis=1)/self.settings.nozzle_dia
-                Vplot = np.mean(self.DP.V[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
+                Vplot = np.mean(np.mean(self.DP.layer_V[:, start_ind:stop_ind, :, int(shp_set[3]/2)],axis=2), axis=1)
                 RSSplot = np.mean(self.DP.uv_mean[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
 
                 fact_loc = np.sign(np.linspace(0, len(Uplot) - 1, len(Uplot)) - ind_center)
@@ -184,13 +186,14 @@ class ConditionalStats_Plot:
                     vorticity_plot = np.mean(vorticity[:, start_ind:stop_ind], axis=1)
                     #vorticity_mod_plot = np.mean(vorticity_mod[:, start_ind:stop_ind], axis=1)
                     enstrophy_flux_plot = np.mean(enstrophy_flux[:, start_ind:stop_ind], axis=1)
-                denom_fact = (Ucenter - self.u_coflow)
-                denom_fact_ke = 1.0#(Ucenter - self.u_coflow) ** 3.0#(Ucenter) ** 3.0#
+                denom_fact = (Ucenter - ucoflow)
+                denom_fact_ke = (Ucenter - ucoflow) ** 3.0#(Ucenter) ** 3.0#
 
-                ax.scatter(xplot, (Uplot- self.u_coflow) / denom_fact,
+                ax.scatter(xplot, (Uplot-ucoflow)/denom_fact,
                            s=mrkr_size)  # np.linspace(0,len(Uplot)-1,len(Uplot))
                 ax.set_ylabel('U/U$_c$')
                 ax.set_xlabel('r/D')
+                print('ucoflow=',ucoflow)
 
                 ax1.scatter(xplot, (Vplot-Vplot[int(len(Vplot)/2)]) / denom_fact, s=mrkr_size)
                 ax1.set_ylabel('(V-Vb)/U$_c$')

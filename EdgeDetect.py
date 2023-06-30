@@ -111,7 +111,7 @@ class Edge:
             plt.imshow(edges)  # ,extent = extent)
             plt.title("Edges after contour detect")
             plt.colorbar()
-            plt.show()
+            #plt.show()
 
         """plt.subplots()
         img_cnt1 = cv2.drawContours(edges, [contour_long[1]], 0, (255, 0, 0), 1)
@@ -315,14 +315,14 @@ class Edge:
 
         return arr_scale
 
-    def data_detect(self,u,v,xx,yy):
+    def data_detect(self,u,v,xx,yy, U, V):
         """
         velocity data already provided
         :param u:
         :param v:
         :return:
         """
-        vel_mag = np.sqrt(np.add(np.power(u, 2.0), np.power(v, 2.0)))
+        vel_mag = (np.add(np.power(u-U, 2.0), np.power(v-V, 2.0)))
 
         #vel_mag = np.subtract(vel_mag,np.min(vel_mag))
         x_edge, y_edge, img_proc0, contours, cluster_img = self.detect(vel_mag, plot_img='n')

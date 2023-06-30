@@ -18,9 +18,21 @@ class InterfaceDetection:
         self.num_pos = num_pos
 
 
-    def Detect(self, u, v, x, y, layer):
+    def Detect(self, u, v, x, y, layer,U,V,win_cond):
+        """
+
+        :param u: instantaneous velocity along x axis(2D array)
+        :param v: instantaneous velocity along y axis(2D array)
+        :param x: x coordinates(2D array)
+        :param y: y coordinates(2D array)
+        :param layer:
+        :param U: mean velocity along x axis(2D array)
+        :param V: mean velocity along y axis(2D array)
+        :param win_cond: size of window to be used for Savitsky Golay 2D filtering on extracted conditional data
+        :return:
+        """
         plot_img='n'
-        win_cond=5# size of window to be used for Savitsky Golay 2D filtering on extracted conditional data
+        #win_cond=5#
         edge = EdgeDetect.Edge()
         #u_sg = sgolay2d(u, window_size=5, order=2)
         #v_sg = sgolay2d(v, window_size=5, order=2)
@@ -29,7 +41,7 @@ class InterfaceDetection:
         omega = v_derivx-u_derivy
         #u = u_sg
         #v= v_sg
-        X_I, Y_I, img_proc0,dx,dy,x0,y0, contours, cluster_img = edge.data_detect(u,v,x,y)
+        X_I, Y_I, img_proc0,dx,dy,x0,y0, contours, cluster_img = edge.data_detect(u,v,x,y,U,V)
         print("Y_I shape=",np.shape(Y_I))
         m,X_out,Y_out,grad2 = self.edge_slope((X_I-x0)/dx,(Y_I-y0)/dy,contours,dx,dy,x0,y0)
         # Todo: Extract gradient after smoothing velocity field
@@ -58,7 +70,7 @@ class InterfaceDetection:
             plt.colorbar
 
             plt.subplots()
-            plt.imshow(u_sg)
+            plt.imshow(u)
             plt.colorbar
 
         #plt.show()
@@ -71,9 +83,9 @@ class InterfaceDetection:
         if plot_img=='y':
             step = 1
 
-            xlayer_plot = ((self.layer_x[:,::step,0] - x0) / dx)
-            ylayer_plot = ((self.layer_y[:,::step,0]- y0) / dy)
-            color_arr = np.transpose(np.transpose(np.ones((np.shape(ylayer_plot))))*range(60))#np.ones(np.shape(ylayer_plot))*range(60)#np.ones(np.shape(ylayer_plot))*range(60)#
+            xlayer_plot = ((self.layer_x[:,::step,int(win_cond/2)] - x0) / dx)
+            ylayer_plot = ((self.layer_y[:,::step,int(win_cond/2)]- y0) / dy)
+            color_arr = np.transpose(np.transpose(np.ones((np.shape(ylayer_plot))))*range(self.shear_num))#np.ones(np.shape(ylayer_plot))*range(60)#np.ones(np.shape(ylayer_plot))*range(60)#
             """side_arr = np.array(self.side_val[::step, :, 0])
             off_side = np.where(side_arr[:, 0] > 0.75)[0]
             color_arr[off_side] = np.flip(color_arr[off_side], 1)"""
@@ -89,7 +101,7 @@ class InterfaceDetection:
             plt.imshow(img_proc0)
             # sc = plt.scatter((self.layer_x[::1,:,0] - x0) / dx, (self.layer_y[::1,:,0]- y0) / dy, c= color_arr,cmap='jet', s=9)
             sc = plt.scatter(xlayer_plot, ylayer_plot,
-                             c=(self.side_val[:,::step, 0]), cmap='jet', s=9)
+                             c=(self.side_val[:,::step, int(win_cond/2)]), cmap='jet', s=9)
             # plt.scatter(self.layer_x[31, :], self.layer_y[31, :], c='r', s=5)
             plt.scatter((X_I - x0) / dx, (Y_I - y0) / dy, c='k', s=5)
             plt.colorbar(sc)
@@ -359,8 +371,8 @@ class InterfaceDetection:
         :param dx:
         :return:
         """
-        dist = (X_I-point_x)**2.0+(Y_I-point_y)**2.0
-        check = np.logical_or(dist<(dx*0.8)**2.0,dist==0)
+        dist = np.sqrt((X_I-point_x)**2.0+(Y_I-point_y)**2.0)
+        check = np.logical_or(dist<=(dx*1.2),dist==0.0)
         return np.sum(check)
     def conditional_points(self,TI_j,m2,dy,x1,y1,win_size):
         # Iterating over thickness of shear layer defined
@@ -409,12 +421,13 @@ class InterfaceDetection:
         #m1 = np.concatenate(([m1[0]], m1))
         # Central difference
         #m1 = np.convolve(m1, np.ones(2) / 2, mode='valid')
-        m1=m
+        m1=np.array(m)
         """plt.subplots()
         plt.scatter(X_I,m)
         #plt.yscale('log')
         plt.subplots()
         plt.scatter(X_I,Y_I)"""
+        # Extracting points perpendicualr to local edge
         edge_loc_iter_vect = np.vectorize(self.edge_loc_iter,otypes=[object],excluded=['dy','win_cond'])#,excluded=['x','y','u','v','dx','dy','search_pt_vect','neighbour_search_vect'])
         search_pt_vect = np.vectorize(self.search_points)
         neighbour_search_vect = np.vectorize(self.neighbour_search, otypes=[object])
@@ -424,11 +437,12 @@ class InterfaceDetection:
         xmin = np.min(x)
         ymax = np.max(y)
         ymin = np.min(y)
+        # Checking for lines crossing the edge twice
         point_dist = np.vectorize(self.point_distance,otypes=[object], excluded=['X_I','Y_I','dx'])
         #pts = point_dist(val[:, 0, :, 0],val[:, 1, :, 0],X_I=np.array(X_I),Y_I=np.array(Y_I),dx=dx)
         pts = point_dist(point_x = val[:, :, int(win_cond/2), 0], point_y = val[:, :, int(win_cond/2), 1], X_I=np.array(X_I), Y_I=np.array(Y_I), dx=dx)
         pts = np.stack(pts)
-        pts[:,int(self.shear_num/2.0)] = np.zeros((np.shape(pts)[0]))
+        #pts[:,int(self.shear_num/2.0)] = np.zeros((np.shape(pts)[0]))
         print("Pts shape=",np.shape(pts))
         pts = np.sum(pts,axis=1)
         pts_valid = np.where(pts<2)[0]
@@ -442,6 +456,7 @@ class InterfaceDetection:
         valid_interp = np.intersect1d(np.where(condition3==0)[0],pts_valid)
         x_val_interp = x_coords[valid_interp,:,:]#val[valid_interp,0,:,:]
         y_val_interp = y_coords[valid_interp,:,:]#val[valid_interp,1,:,:]
+        slope_valid = m1[valid_interp]
         shp_val = np.shape(x_val_interp)
         interp_pts = list(zip(np.ndarray.flatten(x_val_interp), np.ndarray.flatten(y_val_interp)))
         #interp_pts = list(zip(val[:, 0, :, :], val[:, 1, :, :]))
@@ -450,27 +465,27 @@ class InterfaceDetection:
         u_val = self.interpolate_array(points, u, interp_pts, shp_cast)
         v_val = self.interpolate_array(points, v, interp_pts, shp_cast)
         omega_val = self.interpolate_array(points, omega, interp_pts, shp_cast)
-        uderivx_val = self.interpolate_array(points, u_derivx, interp_pts, shp_cast)
+        """uderivx_val = self.interpolate_array(points, u_derivx, interp_pts, shp_cast)
         uderivy_val = self.interpolate_array(points, u_derivy, interp_pts, shp_cast)
         vderivx_val = self.interpolate_array(points, v_derivx, interp_pts, shp_cast)
-        vderivy_val = self.interpolate_array(points, v_derivy, interp_pts, shp_cast)
+        vderivy_val = self.interpolate_array(points, v_derivy, interp_pts, shp_cast)"""
         side_val = self.interpolate_array(points, cluster_img, interp_pts, shp_cast)
         x_val_interp = np.reshape(x_val_interp, shp_cast)
         y_val_interp = np.reshape(y_val_interp, shp_cast)
         print("Ylayer length=",len(Y_I))
         print("layer shape=",np.shape(x_val_interp))
         # Inversion based on which side of the curve the starting point lies on
-        side_arr = np.array(side_val[:, :, 0])
-        off_side = np.where(side_arr[:,0] <0.5)[0]
+        side_arr = np.array(side_val[:, :, int(win_cond/2)])
+        off_side = np.where(side_arr[:,0] <0.95)[0]
         x_val_interp[off_side] = np.flip(x_val_interp[off_side], 1)
         y_val_interp[off_side] = np.flip(y_val_interp[off_side], 1)
         u_val[off_side] = np.flip(u_val[off_side], 1)
         v_val[off_side] = np.flip(v_val[off_side], 1)
         omega_val[off_side] = np.flip(omega_val[off_side], 1)
-        uderivx_val[off_side] = np.flip(uderivx_val[off_side], 1)
+        """uderivx_val[off_side] = np.flip(uderivx_val[off_side], 1)
         uderivy_val[off_side] = np.flip(uderivy_val[off_side], 1)
         vderivx_val[off_side] = np.flip(vderivx_val[off_side], 1)
-        vderivy_val[off_side] = np.flip(vderivy_val[off_side], 1)
+        vderivy_val[off_side] = np.flip(vderivy_val[off_side], 1)"""
         # Final output, swap axis= 0 and 1
         shp_cast = (shp_val[0],shp_val[1],shp_val[2])
         self.layer_x = np.swapaxes(x_val_interp, 0,1)
@@ -478,11 +493,12 @@ class InterfaceDetection:
         self.layer_U = np.swapaxes(u_val, 0,1)
         self.layer_V = np.swapaxes(v_val, 0,1)
         self.layer_omega= np.swapaxes(omega_val, 0,1)
-        self.layer_uderivx = np.swapaxes(uderivx_val, 0, 1)
+        """self.layer_uderivx = np.swapaxes(uderivx_val, 0, 1)
         self.layer_uderivy = np.swapaxes(uderivy_val, 0, 1)
         self.layer_vderivx = np.swapaxes(vderivx_val, 0, 1)
-        self.layer_vderivy = np.swapaxes(vderivy_val, 0, 1)
+        self.layer_vderivy = np.swapaxes(vderivy_val, 0, 1)"""
         self.side_val = np.swapaxes(side_val, 0,1)
+        self.slope_cond = slope_valid
         self.Y_plot = np.tile(np.arange(1, self.shear_num + 1), (1, self.num_pos)) - (self.shear_num / 2)
 
     def ShearLayer_archived(self, X_I, Y_I, m, x, y, u, v, dx, dy, x0, y0):

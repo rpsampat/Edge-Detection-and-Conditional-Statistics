@@ -45,7 +45,7 @@ class Run:
         header = self.image_dir_list(self.axial_location,self.rpm_coflow)
         DP.processor(settings,header)
         DA = DataAccess.DataAccess()
-        strng = "TurbulenceStatistics_DP_tkebasis_otsuby8_gradientcalctest_1imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2_unsmoothinput"#otsuby1_velmagsqrt_shearlayeranglemodify_overlayangleadjust
+        strng = "rpm"+self.rpm_coflow+"_tkebasis_otsuby8"
         file_path2 = self.drive+self.save_folder + self.axial_location +'/'+ strng + '.pkl'
         data = {'DP':DP,'settings':settings}
         with open(file_path2, 'wb') as f:

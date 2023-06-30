@@ -5,7 +5,7 @@ class TurbulenceField:
         self.v = V - meanV
         self.x = x
         self.y = y
-        self.gradients_calc(self.u, self.v, self.x, self.y)
+        #self.gradients_calc(self.u, self.v, self.x, self.y)
 
     def gradients_calc(self, u, v, x, y):
         Omega, dx, dy, dU1dx1, dU1dx2, dU2dx1, dU2dx2 = Vorticity(u, v, x, y)

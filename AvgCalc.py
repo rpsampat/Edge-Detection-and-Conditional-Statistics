@@ -1,7 +1,5 @@
-import numpy as np
 import DataAccess
-from matrix_build import matrix_build
-from Vorticity import Vorticity
+
 class AvgCalc:
     def __init__(self, num_tot, start_loc, end_loc, calc_avg, interface_detect, header):
         self.NumImgs = num_tot

@@ -4,16 +4,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import KineticEnergy as KE
 from matrix_build import  matrix_build
+import os
+from scipy.fft import fft, fftshift,fftfreq
 
 class ConditionalStats_Plot:
     def __init__(self):
         self.DP=None
         self.settings = None
-        #self.loc ="O:/JetinCoflow/rpm0_ax15D_centerline_dt35_1000_vloc1_1mmsheet_fstop4_PIV_MP(2x24x24_75ov)_5000imgs_20D=unknown/"
+        self.drive = "P:/"
+        self.avg_folder = "JetinCoflow_V2/Exported/PIV_5000imgs/"
+        self.folder = "JetinCoflow_V2/Exported/PIV_5000imgs/Conditional_data/"
+        self.axial_location = '20D'  # 5D,10D,15D,20D,30D,70D
         self.loc = "O:/JetinCoflow/15D_375rpm/"
         self.u_coflow=3.1953 # m/s
 
-    def readfile(self):
+    def readfile(self,rpm_coflow):
         loc = self.loc
         #mat = sio.loadmat(loc+'TurbulenceStatistics_DP.mat')
         #strng = "TurbulenceStatistics_DP_baseline_otsuby1_velmagsqrt_shearlayeranglemodify_overlayangleadjust_500imgs"#"TurbulenceStatistics_DP_baseline_velmag_100imgs"#
@@ -21,7 +26,8 @@ class ConditionalStats_Plot:
         #strng = "TurbulenceStatistics_DP_baseline_otsuby2_velmagsqrt_shearlayeranglemodify_overlayangleadjust_10imgs"
         try:
             #strng = "TurbulenceStatistics_DP_baseline_otsuby4_gradientcalctest_200imgs_withvoriticity_interfacecheck"
-            strng = "TurbulenceStatistics_DP_tkebasis_otsuby8_gradientcalctest_100imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2_unsmoothinput"
+            #strng = "TurbulenceStatistics_DP_tkebasis_otsuby8_gradientcalctest_100imgs_withvoriticity_interfacecheck_fixeddirectionality_spatialfreq2_unsmoothinput"
+            strng = "rpm"+str(rpm_coflow)+"_kebasis_otsuby8_numimgs500"
             file_path2 = loc + strng + '.pkl'
             with open(file_path2,'rb') as f:
                 mat = pickle.load(f)
@@ -30,12 +36,66 @@ class ConditionalStats_Plot:
             file_path2 = loc + strng + '.pkl'
             with open(file_path2, 'rb') as f:
                 mat = pickle.load(f)
+
         self.DP = mat['DP']
         self.settings = mat['settings']
 
         return 0
 
-    def read_AvgData(self):
+    def image_dir_list(self,axial_loc,rpm_coflow):
+        """
+        Identify and extract image directory list for processing
+        :return:
+        """
+        path = self.drive + self.avg_folder + self.axial_location
+        identifiers = ["rpm"+rpm_coflow, "ax"+axial_loc]
+        identifier_exclude = ["_index","N2","CO2"]
+        identifier_optional = ["ax"+axial_loc]
+        subdir_list = next(os.walk(path))[1]  # list of immediate subdirectories within the data directory
+        sub_list=[]
+        for subdir in subdir_list:
+            check_id = [(x in subdir) for x in identifiers]
+            check_id_exclude = [(x in subdir) for x in identifier_exclude]
+            check_id_optional = [(x in subdir) for x in identifier_optional]
+            isfalse = False in check_id
+            isTrue_exclude = True in check_id_exclude
+            isTrue = True in check_id_optional
+            if not(isfalse) and not(isTrue_exclude) and isTrue:
+                sub_list.append(path+'/'+subdir+'/')
+
+        print(sub_list)
+        return np.array(sub_list)
+
+    def read_AvgData(self,loc):
+        Avg_mat = np.loadtxt(loc + 'Avg_mat.dat')
+        isValid = np.where(Avg_mat[:, 4] > 0)[0]
+        Avg_mat_res = Avg_mat[isValid, :]
+        x_avg = Avg_mat_res[:, 0]
+        y_avg = Avg_mat_res[:, 1]
+        u_avg = Avg_mat_res[:, 2]
+        v_avg = Avg_mat_res[:, 3]
+        S_avg, x_list_avg, y_list_avg, ix_avg, iy_avg = matrix_build(x_avg, y_avg, u_avg, v_avg)
+        size_avg = S_avg.shape
+        x2uniq = S_avg[0, :, 0]
+        temp_index1 = np.where(x2uniq >= self.settings.start_loc)[0]
+        temp_index2 = np.where(x2uniq <= self.settings.end_loc)[0]
+        x_index1 = temp_index1[0]
+        x_index2 = temp_index2[-1]
+        self.upper_cutoff_x = size_avg[0]
+        self.lower_cutoff_x = 0
+        self.upper_cutoff_y = x_index2
+        self.lower_cutoff_y = x_index1
+        self.U = S_avg[self.lower_cutoff_x:self.upper_cutoff_x, self.lower_cutoff_y:self.upper_cutoff_y, 2]
+        self.V = S_avg[self.lower_cutoff_x:self.upper_cutoff_x, self.lower_cutoff_y:self.upper_cutoff_y, 3]
+        self.X = S_avg[self.lower_cutoff_x:self.upper_cutoff_x, self.lower_cutoff_y:self.upper_cutoff_y, 0]
+        self.Y = S_avg[self.lower_cutoff_x:self.upper_cutoff_x, self.lower_cutoff_y:self.upper_cutoff_y, 1]
+        jet_center_x = 10
+        mean_x_max = np.max(self.U[:, jet_center_x])
+        self.jet_center = self.Y[self.U[:, jet_center_x] == mean_x_max, jet_center_x]
+        #plt.subplots()
+        #plt.imshow(self.V)
+
+    def read_AvgData_quick(self):
         loc = self.loc
         Avg_mat = np.loadtxt(loc + 'Avg_mat.dat')
         isValid = np.where(Avg_mat[:, 4] > 0)[0]
@@ -65,16 +125,58 @@ class ConditionalStats_Plot:
         #plt.subplots()
         #plt.imshow(self.V)
 
+    def velocity_transform_coords(self,U,V,slope):
+        theta = np.swapaxes(np.arctan(slope),0,1)
+        U_swap = np.swapaxes(U,1,3)
+        V_swap = np.swapaxes(V,1,3)
+        U_transf = U_swap*np.sin(theta)-V_swap*np.cos(theta)
+        V_transf = U_swap * np.cos(theta) + V_swap * np.sin(theta)
+
+        return np.swapaxes(U_transf,1,3),np.swapaxes(V_transf,1,3)
+
+    def fft_calc(self,index,quant):
+        quant1 = quant[:,index]
+        yf = np.abs(fftshift(fft(quant[:,index])))
+
+        return yf
+
+    def edge_fft(self,X,Y):
+        fft_calc_vect = np.vectorize(self.fft_calc,otypes=[object],excluded=['quant'])
+        mod_unit = np.sqrt((X[-1,:]-X[0,:])**2.0+(Y[-1,:]-Y[0,:])**2.0)
+        x_unit_vect = (X[-1,:]-X[0,:])/mod_unit
+        y_unit_vect = (Y[-1,:]-Y[0,:])/mod_unit
+        X_vect = X-X[0,:]
+        Y_vect = Y-Y[0,:]
+        X_equi = X_vect*x_unit_vect+Y_vect*y_unit_vect
+        Y_equi = X_vect*y_unit_vect-Y_vect*x_unit_vect
+        shp = np.shape(X)
+        index = range(shp[1])
+        yf = fft_calc_vect(index = index, quant = Y_equi)
+        yf = np.stack(yf)
+        yf = np.mean(yf,axis=0)/shp[0]
+        xf2 = fft_calc_vect(index=index, quant=X_equi)
+        xf2 = np.stack(xf2)
+        xf2 = np.mean(xf2, axis=0)/shp[0]
+        xf = fftshift(fftfreq(shp[0], abs(X[1, 2] - X[0, 2])))
+        plt.subplots()
+        plt.plot(xf[int(len(yf)/2)+1:],yf[int(len(yf)/2)+1:])
+        plt.yscale('log')
+        plt.subplots()
+        plt.scatter(xf2[int(len(yf) / 2) + 1:], yf[int(len(yf) / 2) + 1:])
+        plt.yscale('log')
+        plt.xscale('log')
+        #plt.show()
 
     def extract_data_compare(self):
         loc_dict = {0:"O:/JetinCoflow/rpm0_ax15D_centerline_dt35_1000_vloc1_1mmsheet_fstop4_PIV_MP(2x24x24_75ov)_5000imgs_20D=unknown/",
                     375:"O:/JetinCoflow/15D_375rpm/",
                     680:"O:/JetinCoflow/15D_680rpm/"}
         leg_dict={0: 0, 375: 0.16, 680 : 0.33}
+        loc =self.drive+self.folder+self.axial_location+'/'
         u_coflow_dict={0: 0, 375: 3.1953, 680: 6.6}
-        key_list = [0,680]#,375,680]#,375]
+        key_list = [0]#,375,680]#,375]
         xloc = [50]#,,680 100, 400, 550]  # self.DP.X_pos
-        h_win = 5  # +/- hwin
+        h_win = 10  # +/- hwin
         """fig, ax = plt.subplots()
         img = ax.imshow(np.mean(self.DP.layer_U, axis=2)[:, :, 0])
         fig.colorbar(img)"""
@@ -96,10 +198,10 @@ class ConditionalStats_Plot:
             fig12, ax12 = plt.subplots()
             fig13, ax13 = plt.subplots()
         for key in key_list:
-            self.loc = loc_dict[key]
-            self.u_coflow = u_coflow_dict[key]
-            self.readfile()
-            self.read_AvgData()
+            self.loc = loc
+            self.readfile(key)
+            sublist = self.image_dir_list(self.axial_location, str(key))
+            self.read_AvgData(sublist[0])
             """shp_orig = np.shape(self.DP.layer_U)
             self.DP.layer_U = np.reshape(self.DP.layer_U,(shp_orig[1],shp_orig[0],shp_orig[2],shp_orig[3]))
             self.DP.layer_V = np.reshape(self.DP.layer_V,(shp_orig[1],shp_orig[0],shp_orig[2],shp_orig[3]))
@@ -130,11 +232,13 @@ class ConditionalStats_Plot:
             dy = dx
             plt.subplots()
             plt.imshow(np.mean(np.mean(self.DP.layer_U[:, 80:140,:, :], axis=2),axis=1))
+            U_transf,V_transf = self.velocity_transform_coords(self.DP.layer_U, self.DP.layer_V, self.DP.slope_cond)
+            self.edge_fft(self.DP.layer_x[int(shp_set[0]/2),:,1:,int(shp_set[3]/2)],self.DP.layer_y[int(shp_set[0]/2),:,1:,int(shp_set[3]/2)])
             if vorticity_plot_opt == 'y':
                 #K_td, K_t, K_nu, K_nu_t, K_adv,enstrophy,vorticity, vorticity_mod, enstrophy_flux = KE.ke_budget_terms(mean_u_cond, mean_v_cond, uprime_cond, vprime_cond, dx,
                  #                                               dy,self.DP.layer_U,self.DP.layer_V,self.DP.layer_omega[:,:,:,0])
                 K_td, K_t, K_nu, K_nu_t, K_adv, enstrophy, vorticity, vorticity_mod, enstrophy_flux = KE.ke_budget_terms_svg_input(
-                    dx,dy, self.DP.layer_U, self.DP.layer_V, self.DP.layer_omega[:, :, :, int(shp_set[3]/2)])
+                    dx,dy, U_transf, V_transf, self.DP.layer_omega[:, :, :, int(shp_set[3]/2)])
                 #K_td, K_t, K_nu, K_nu_t, K_adv, omega, Omega_mean, Omeage_modulus_mean, enstrophy_flux
             mrkr_size = 10
             for i in range(len(xloc)):

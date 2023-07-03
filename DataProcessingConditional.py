@@ -4,7 +4,7 @@ import InterfaceDetection
 import VelocityData
 import Ensemble
 import TurbulenceField
-import TKE_budget
+#import TKE_budget
 import matplotlib.pyplot as plt
 
 class DataProcessor_Conditional:
@@ -46,7 +46,7 @@ class DataProcessor_Conditional:
         self.xval2 = {}
         self.yval2 = {}
 
-    def processor(self, settings, header):
+    def processor(self, settings, header,otsu_fact):
 
         num_avg = settings.num_inst_avg  # array of number of images used for averaging from each directory
         AC = AvgCalc.AvgCalc(num_avg, settings.start_loc, settings.end_loc, settings.calc_avg, settings.edgedetect, header)
@@ -75,7 +75,7 @@ class DataProcessor_Conditional:
             for i in range(num_imgs[h]):
                 S = VD.data_matrix(i, meanU.shape, settings.start_loc, AC, header[h])
                 if i == 0 and h == 0:
-                    jet_interface = InterfaceDetection.InterfaceDetection(meanU, settings.shear_num, settings.m_x_loc)
+                    jet_interface = InterfaceDetection.InterfaceDetection(meanU, settings.shear_num, settings.m_x_loc,otsu_fact)
                     jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer, meanU, meanV,win_size)
                     size_interface = jet_interface.layer_x.shape
                     self.layer_x = np.zeros((size_interface[0], size_interface[1], num_inst,win_size))
@@ -94,7 +94,8 @@ class DataProcessor_Conditional:
                 except:
                     continue
                 shp_curr = np.shape(jet_interface.layer_x)
-                if size_interface[1]>shp_curr[1]:
+                shp_arr = np.shape(self.layer_x)
+                if shp_arr[1]>=shp_curr[1]:
                     self.layer_x[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_x
                     self.layer_y[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_y
                     self.layer_U[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_U
@@ -105,6 +106,25 @@ class DataProcessor_Conditional:
                     self.layer_vderivx[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_vderivx
                     self.layer_vderivy[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_vderivy"""
                     self.slope_cond[0:shp_curr[1], loop_count + i] = jet_interface.slope_cond
+                elif shp_arr[1]<shp_curr[1]:
+                    self.layer_x = np.append(self.layer_x,np.zeros((shp_arr[0],shp_curr[1]-shp_arr[1],shp_arr[2],shp_arr[3])),axis = 1)
+                    self.layer_y = np.append(self.layer_y,
+                                             np.zeros((shp_arr[0], shp_curr[1] - shp_arr[1], shp_arr[2], shp_arr[3])), axis=1)
+                    self.layer_U = np.append(self.layer_U,
+                                             np.zeros((shp_arr[0], shp_curr[1] - shp_arr[1], shp_arr[2], shp_arr[3])), axis=1)
+                    self.layer_V = np.append(self.layer_V,
+                                             np.zeros((shp_arr[0], shp_curr[1] - shp_arr[1], shp_arr[2], shp_arr[3])), axis=1)
+                    self.layer_omega = np.append(self.layer_omega,
+                                             np.zeros((shp_arr[0], shp_curr[1] - shp_arr[1], shp_arr[2], shp_arr[3])), axis=1)
+                    self.slope_cond = np.append(self.slope_cond,
+                                             np.zeros((shp_curr[1] - shp_arr[1], shp_arr[2])), axis=0)
+                    self.layer_x[:, :, loop_count + i, :] = jet_interface.layer_x
+                    self.layer_y[:, :, loop_count + i, :] = jet_interface.layer_y
+                    self.layer_U[:, :, loop_count + i, :] = jet_interface.layer_U
+                    self.layer_V[:, :, loop_count + i, :] = jet_interface.layer_V
+                    self.layer_omega[:, :, loop_count + i, :] = jet_interface.layer_omega
+                    self.slope_cond[:, loop_count + i] = jet_interface.slope_cond
+
                 else:
                     self.layer_x[:, :, loop_count + i,:] = jet_interface.layer_x[0:size_interface[0], 0:size_interface[1],:]
                     self.layer_y[:, :, loop_count + i,:] = jet_interface.layer_y[0:size_interface[0], 0:size_interface[1],:]

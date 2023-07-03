@@ -1,4 +1,4 @@
-from Vorticity import Vorticity
+#from Vorticity import Vorticity
 class TurbulenceField:
     def __init__(self, U, V, meanU, meanV, x, y):
         self.u = U - meanU

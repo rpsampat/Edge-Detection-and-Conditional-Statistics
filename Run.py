@@ -11,8 +11,10 @@ class Run:
     def __init__(self):
         self.drive = "P:/"
         self.folder = "JetinCoflow_V2/Exported/PIV_5000imgs/"
-        self.axial_location='10D'#5D,10D,15D,20D,30D,70D
-        self.rpm_coflow ='0'#0,250,375,680
+        self.axial_location='20D'#5D,10D,15D,20D,30D,70D
+        self.rpm_coflow =['0','250','375','680']#0,250,375,680
+        self.num_imgs=[[250,250],[50,50],[50,50],[50,50]]
+        self.otsu_fact=[8,8,8,2]
         self.save_folder = "JetinCoflow_V2/Exported/PIV_5000imgs/Conditional_data/"
 
     def image_dir_list(self,axial_loc,rpm_coflow):
@@ -39,17 +41,26 @@ class Run:
         print(sub_list)
         return np.array(sub_list)
 
-    def main(self):
+    def process(self,rpm_coflow,axial_location,otsu_fact,num_inst):
         settings = Settings.Settings()
+        settings.num_inst=num_inst
         DP = DataProcessingConditional.DataProcessor_Conditional()
-        header = self.image_dir_list(self.axial_location,self.rpm_coflow)
-        DP.processor(settings,header)
+        header = self.image_dir_list(axial_location, rpm_coflow)
+        DP.processor(settings, header,otsu_fact)
         DA = DataAccess.DataAccess()
-        strng = "rpm"+self.rpm_coflow+"_tkebasis_otsuby8"
-        file_path2 = self.drive+self.save_folder + self.axial_location +'/'+ strng + '.pkl'
-        data = {'DP':DP,'settings':settings}
+        num_imgs = np.sum(settings.num_inst)
+        strng = "rpm" + rpm_coflow + "_kebasis_otsuby"+str(otsu_fact) + "_numimgs" + str(num_imgs)
+        file_path2 = self.drive + self.save_folder + axial_location + '/' + strng + '.pkl'
+        data = {'DP': DP, 'settings': settings}
         with open(file_path2, 'wb') as f:
             pickle.dump(data, f)
+
+        del data
+
+    def main(self):
+        #for i in range(len(self.rpm_coflow)):
+        i=0
+        self.process(self.rpm_coflow[i],self.axial_location,self.otsu_fact[i],self.num_imgs[i])
 
     def main_temp(self):
         settings = Settings.Settings()

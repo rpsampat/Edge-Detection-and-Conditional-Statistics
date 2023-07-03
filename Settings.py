@@ -1,14 +1,14 @@
 class Settings:
     def __init__(self):
-        self.num_inst_avg = [500]  #[2,2] number of images used for averaging
-        self.calc_avg = 'n'  # calculate avg y/n
+        self.num_inst_avg = [100]  #[2,2] number of images used for averaging
+        self.calc_avg = 'y'  # calculate avg y/n
         self.calc_avg_2 = 'n'
         self.twopointcorr = 'n'  # y/n
         self.nozzle_dia = 0.011  # air nozzle diameter, in m
         self.start_loc = -5.75  # Image cutoff limits along x axis, in mm
         self.end_loc = 61.5  # Image cutoff limits along x axis, in mm
         self.print_mean = 'y'  # y/n
-        self.num_inst = [1,1]  # number of images used for statistics calculation
+        self.num_inst = [500]  # number of images used for statistics calculation
         self.edgedetect = 'y'
         self.scheme = "DirectThresh"  # DirectThresh/Cumulative
         self.read_data = 'y'  # y/n

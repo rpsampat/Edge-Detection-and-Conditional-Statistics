@@ -245,8 +245,9 @@ def domain_sgolayy(ynum,Z):
     order = 2
     arr=Z[:,ynum,:]
     Z_out = sgolay2d(arr, win, order, derivative=None)
+    dZdx, dZdy = sgolay2d(arr, win, order, derivative='both')
 
-    return Z_out
+    return Z_out,dZdx,dZdy
 
 def domain_sgolayx(img_num,Z,ynum):
 
@@ -263,9 +264,12 @@ def savitzkygolay_local(Z):
     iter = range(shp[2])
     sgolay_vect = np.vectorize(domain_sgolayx,otypes=[object],excluded=['Z','ynum'])
     Z_out = sgolay_vect(img_num =iter,Z=Z,ynum=shp[1])
-    Z_out = np.swapaxes(np.stack(Z_out),0,2)
+    Z_out = np.stack(Z_out)
+    Z_ret = np.swapaxes(np.stack(Z_out[:, :, 0, :, :]), 0, 2)
+    dZdx = np.swapaxes(np.stack(Z_out[:, :, 1, :, :]), 0, 2)
+    dZdy = np.swapaxes(np.stack(Z_out[:, :, 2, :, :]), 0, 2)
 
-    return Z_out
+    return Z_ret
 
 def subtract_mean(val,U,U_mean):
     uprime = np.subtract(U[:,:,val,:], U_mean)
@@ -339,7 +343,7 @@ def ke_budget_terms_svg_input(dx, dy, U_inst, V_inst, omega_inst):#,uderivx,uder
     K_td =  u1u1 * dUdx + u1u2 * dUdy + u2u1 * dVdx + u2u2 * dVdy + u1u3 * dUdz + u2u3 * dVdz + u3u1 * dWdx + u3u2 * dWdy + u3u3 * dWdz
 
     # Turbulent transport
-    K_t1 = U1 * du1u1dx + U1 * du1u2dy# + U1 * du1u3dz + U2 * du2u1dx + U2 * du2u2dy + U2 * du2u3dz + U3 * du3u1dx + U3 * du3u2dy + U3 * du3u3dz
+    K_t1 = U1 * du1u1dx + U1 * du1u2dy + U1 * du1u3dz + U2 * du2u1dx + U2 * du2u2dy + U2 * du2u3dz + U3 * du3u1dx + U3 * du3u2dy + U3 * du3u3dz
     K_t = -1 * K_t1 - K_td
 
     # Viscous dissipation

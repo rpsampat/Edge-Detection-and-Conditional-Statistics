@@ -264,7 +264,7 @@ class Edge:
         #cv2.imshow('Sharpened image', sharp_img)
         cv2.waitKey(0)
 
-    def detect(self,vel_mag,plot_img):
+    def detect(self,vel_mag,plot_img,otsu_fact):
         img_proc0 = self.arr2img(vel_mag)
         if plot_img=='y':
             plt.subplots()
@@ -280,7 +280,7 @@ class Edge:
         otsu_threshold, otsu_image_result = cv2.threshold(img_proc0, 0, 255, cv2.THRESH_TRUNC + cv2.THRESH_OTSU)
         print("Cluster Otsu=", otsu_threshold)
         # thresholding important in this step as otherwise clusters not detected
-        img_cluster_mask = self.dbscan(img_proc0, red_level=0, dbscan_thresh=otsu_threshold/8, epsilon=3, minpts=20,plot_img=plot_img)
+        img_cluster_mask = self.dbscan(img_proc0, red_level=0, dbscan_thresh=otsu_threshold/otsu_fact, epsilon=3, minpts=20,plot_img=plot_img)
         img_proc1 = img_cluster_mask  # img_proc0*img_cluster_mask
         if plot_img=='y':
             plt.subplots()
@@ -315,17 +315,18 @@ class Edge:
 
         return arr_scale
 
-    def data_detect(self,u,v,xx,yy, U, V):
+    def data_detect(self,u,v,xx,yy, U, V,otsu_fact):
         """
         velocity data already provided
         :param u:
         :param v:
         :return:
         """
-        vel_mag = (np.add(np.power(u-U, 2.0), np.power(v-V, 2.0)))
+        #vel_mag = (np.add(np.power(u-U, 2.0), np.power(v-V, 2.0)))
+        vel_mag = (np.add(np.power(u, 2.0), np.power(v, 2.0)))
 
         #vel_mag = np.subtract(vel_mag,np.min(vel_mag))
-        x_edge, y_edge, img_proc0, contours, cluster_img = self.detect(vel_mag, plot_img='n')
+        x_edge, y_edge, img_proc0, contours, cluster_img = self.detect(vel_mag, plot_img='n',otsu_fact=otsu_fact)
         dx = xx[0,2] - xx[0,1]
         dy = yy[2,0] - yy[1,0]
         x0 = min(xx[0,:])

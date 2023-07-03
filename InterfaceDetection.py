@@ -4,11 +4,12 @@ import EdgeDetect
 import Settings
 import warnings
 import math
+from scipy.fft import fft, fftshift, fftfreq
 from scipy.interpolate import LinearNDInterpolator,interpn
 from SavitskyGolay2D import sgolay2d
 
 class InterfaceDetection:
-    def __init__(self, U, num, num_pos):
+    def __init__(self, U, num, num_pos,otsu_fact):
         s = U.shape
         self.layer_x = np.zeros((num, s[1],7))
         self.layer_y = np.zeros((num, s[1],7))
@@ -16,6 +17,7 @@ class InterfaceDetection:
         self.layer_V = np.zeros((num, s[1],7))
         self.shear_num = num
         self.num_pos = num_pos
+        self.otsu_fact = otsu_fact
 
 
     def Detect(self, u, v, x, y, layer,U,V,win_cond):
@@ -41,7 +43,7 @@ class InterfaceDetection:
         omega = v_derivx-u_derivy
         #u = u_sg
         #v= v_sg
-        X_I, Y_I, img_proc0,dx,dy,x0,y0, contours, cluster_img = edge.data_detect(u,v,x,y,U,V)
+        X_I, Y_I, img_proc0,dx,dy,x0,y0, contours, cluster_img = edge.data_detect(u,v,x,y,U,V,self.otsu_fact)
         print("Y_I shape=",np.shape(Y_I))
         m,X_out,Y_out,grad2 = self.edge_slope((X_I-x0)/dx,(Y_I-y0)/dy,contours,dx,dy,x0,y0)
         # Todo: Extract gradient after smoothing velocity field
@@ -79,6 +81,9 @@ class InterfaceDetection:
         dy_cond = dy/2.0
         self.ShearLayer(X_out, Y_out,m,grad2,x, y, u, v,dx_cond,dy_cond,x0,y0,cluster_img,omega,u_derivy,u_derivx,v_derivy, v_derivx, win_cond)
         print('Max u=',np.max(u))
+        """quant = (Y_out - Y_out[0])#np.sqrt((Y_out - Y_out[0])**2+(X_out-X_out[0])**2.0)
+        yf = np.abs(fftshift(fft(quant)))/len(X_out)
+        xf = fftshift(fftfreq(len(X_out),dx))"""
 
         if plot_img=='y':
             step = 1
@@ -105,6 +110,10 @@ class InterfaceDetection:
             # plt.scatter(self.layer_x[31, :], self.layer_y[31, :], c='r', s=5)
             plt.scatter((X_I - x0) / dx, (Y_I - y0) / dy, c='k', s=5)
             plt.colorbar(sc)
+
+            """plt.subplots()
+            plt.plot(xf[int(len(yf)/2)+1:],yf[int(len(yf)/2)+1:])
+            plt.yscale('log')"""
 
             plt.show()
 
@@ -372,7 +381,7 @@ class InterfaceDetection:
         :return:
         """
         dist = np.sqrt((X_I-point_x)**2.0+(Y_I-point_y)**2.0)
-        check = np.logical_or(dist<=(dx*1.2),dist==0.0)
+        check = np.logical_or(dist<=(dx*0.5),dist==0.0)#1.2
         return np.sum(check)
     def conditional_points(self,TI_j,m2,dy,x1,y1,win_size):
         # Iterating over thickness of shear layer defined
@@ -438,14 +447,14 @@ class InterfaceDetection:
         ymax = np.max(y)
         ymin = np.min(y)
         # Checking for lines crossing the edge twice
-        point_dist = np.vectorize(self.point_distance,otypes=[object], excluded=['X_I','Y_I','dx'])
+        """point_dist = np.vectorize(self.point_distance,otypes=[object], excluded=['X_I','Y_I','dx'])
         #pts = point_dist(val[:, 0, :, 0],val[:, 1, :, 0],X_I=np.array(X_I),Y_I=np.array(Y_I),dx=dx)
         pts = point_dist(point_x = val[:, :, int(win_cond/2), 0], point_y = val[:, :, int(win_cond/2), 1], X_I=np.array(X_I), Y_I=np.array(Y_I), dx=dx)
         pts = np.stack(pts)
         #pts[:,int(self.shear_num/2.0)] = np.zeros((np.shape(pts)[0]))
         print("Pts shape=",np.shape(pts))
         pts = np.sum(pts,axis=1)
-        pts_valid = np.where(pts<2)[0]
+        pts_valid = np.where(pts<2)[0]"""
         x_coords = val[:, :, :, 0]#val[:, 0, :, :]
         y_coords = val[:, :, :, 1]  # val[:, 1, :, :]
         condition1 = np.logical_or(x_coords > xmax, x_coords < xmin)
@@ -453,7 +462,7 @@ class InterfaceDetection:
         condition2 = np.logical_or(y_coords > ymax, y_coords < ymin)
         condition2 = np.sum(np.sum(condition2, axis=1), axis=1)
         condition3 = condition1+condition2
-        valid_interp = np.intersect1d(np.where(condition3==0)[0],pts_valid)
+        valid_interp = np.where(condition3==0)[0]#np.intersect1d(np.where(condition3==0)[0],pts_valid)
         x_val_interp = x_coords[valid_interp,:,:]#val[valid_interp,0,:,:]
         y_val_interp = y_coords[valid_interp,:,:]#val[valid_interp,1,:,:]
         slope_valid = m1[valid_interp]
@@ -477,11 +486,20 @@ class InterfaceDetection:
         # Inversion based on which side of the curve the starting point lies on
         side_arr = np.array(side_val[:, :, int(win_cond/2)])
         off_side = np.where(side_arr[:,0] <0.95)[0]
+        doublecross_side = np.where(np.abs(side_arr[:,0]- side_arr[:,self.shear_num-1])<0.5)[0]
         x_val_interp[off_side] = np.flip(x_val_interp[off_side], 1)
         y_val_interp[off_side] = np.flip(y_val_interp[off_side], 1)
         u_val[off_side] = np.flip(u_val[off_side], 1)
         v_val[off_side] = np.flip(v_val[off_side], 1)
         omega_val[off_side] = np.flip(omega_val[off_side], 1)
+        # delete lines that cross interface twice
+        x_val_interp = np.delete(x_val_interp,doublecross_side, 0)
+        y_val_interp = np.delete(y_val_interp,doublecross_side, 0)
+        u_val = np.delete(u_val,doublecross_side, 0)
+        v_val = np.delete(v_val,doublecross_side, 0)
+        omega_val = np.delete(omega_val,doublecross_side, 0)
+        side_val = np.delete(side_val, doublecross_side, 0)
+        slope_valid = np.delete(slope_valid, doublecross_side, 0)
         """uderivx_val[off_side] = np.flip(uderivx_val[off_side], 1)
         uderivy_val[off_side] = np.flip(uderivy_val[off_side], 1)
         vderivx_val[off_side] = np.flip(vderivx_val[off_side], 1)

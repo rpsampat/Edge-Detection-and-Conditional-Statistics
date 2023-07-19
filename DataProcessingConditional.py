@@ -82,12 +82,19 @@ class DataProcessor_Conditional:
                     self.layer_y = np.zeros((size_interface[0], size_interface[1], num_inst,win_size))
                     self.layer_U = np.zeros((size_interface[0], size_interface[1], num_inst,win_size))
                     self.layer_V = np.zeros((size_interface[0], size_interface[1], num_inst,win_size))
-                    self.layer_omega = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))
+                    #self.layer_omega = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))
                     """self.layer_uderivx = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))
                     self.layer_uderivy = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))
                     self.layer_vderivx = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))
                     self.layer_vderivy = np.zeros((size_interface[0], size_interface[1], num_inst, win_size))"""
                     self.slope_cond = np.zeros((size_interface[1], num_inst))
+                    # Engulfment sites
+                    size_engulf = jet_interface.layer_x_engulf.shape
+                    self.layer_x_engulf = np.zeros((size_engulf[0], size_engulf[1], num_inst, win_size))
+                    self.layer_y_engulf = np.zeros((size_engulf[0], size_engulf[1], num_inst, win_size))
+                    self.layer_U_engulf = np.zeros((size_engulf[0], size_engulf[1], num_inst, win_size))
+                    self.layer_V_engulf = np.zeros((size_engulf[0], size_engulf[1], num_inst, win_size))
+                    self.slope_cond_engulf = np.zeros((size_engulf[1], num_inst))
                     continue
                 try:
                     jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer,meanU, meanV,win_size)
@@ -95,12 +102,14 @@ class DataProcessor_Conditional:
                     continue
                 shp_curr = np.shape(jet_interface.layer_x)
                 shp_arr = np.shape(self.layer_x)
+                shp_curr_engulf = np.shape(jet_interface.layer_x_engulf)
+                shp_arr_engulf = np.shape(self.layer_x_engulf)
                 if shp_arr[1]>=shp_curr[1]:
                     self.layer_x[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_x
                     self.layer_y[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_y
                     self.layer_U[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_U
                     self.layer_V[:,0:shp_curr[1], loop_count + i,:] = jet_interface.layer_V
-                    self.layer_omega[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_omega
+                    #self.layer_omega[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_omega
                     """self.layer_uderivx[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_uderivx
                     self.layer_uderivy[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_uderivy
                     self.layer_vderivx[:,0:shp_curr[1], loop_count + i, :] = jet_interface.layer_vderivx
@@ -114,15 +123,15 @@ class DataProcessor_Conditional:
                                              np.zeros((shp_arr[0], shp_curr[1] - shp_arr[1], shp_arr[2], shp_arr[3])), axis=1)
                     self.layer_V = np.append(self.layer_V,
                                              np.zeros((shp_arr[0], shp_curr[1] - shp_arr[1], shp_arr[2], shp_arr[3])), axis=1)
-                    self.layer_omega = np.append(self.layer_omega,
-                                             np.zeros((shp_arr[0], shp_curr[1] - shp_arr[1], shp_arr[2], shp_arr[3])), axis=1)
+                    #self.layer_omega = np.append(self.layer_omega,
+                     #                        np.zeros((shp_arr[0], shp_curr[1] - shp_arr[1], shp_arr[2], shp_arr[3])), axis=1)
                     self.slope_cond = np.append(self.slope_cond,
                                              np.zeros((shp_curr[1] - shp_arr[1], shp_arr[2])), axis=0)
                     self.layer_x[:, :, loop_count + i, :] = jet_interface.layer_x
                     self.layer_y[:, :, loop_count + i, :] = jet_interface.layer_y
                     self.layer_U[:, :, loop_count + i, :] = jet_interface.layer_U
                     self.layer_V[:, :, loop_count + i, :] = jet_interface.layer_V
-                    self.layer_omega[:, :, loop_count + i, :] = jet_interface.layer_omega
+                    #self.layer_omega[:, :, loop_count + i, :] = jet_interface.layer_omega
                     self.slope_cond[:, loop_count + i] = jet_interface.slope_cond
 
                 else:
@@ -130,8 +139,8 @@ class DataProcessor_Conditional:
                     self.layer_y[:, :, loop_count + i,:] = jet_interface.layer_y[0:size_interface[0], 0:size_interface[1],:]
                     self.layer_U[:, :, loop_count + i,:] = jet_interface.layer_U[0:size_interface[0], 0:size_interface[1],:]
                     self.layer_V[:, :, loop_count + i,:] = jet_interface.layer_V[0:size_interface[0], 0:size_interface[1],:]
-                    self.layer_omega[:, :, loop_count + i, :] = jet_interface.layer_omega[0:size_interface[0],
-                                                            0:size_interface[1], :]
+                    #self.layer_omega[:, :, loop_count + i, :] = jet_interface.layer_omega[0:size_interface[0],
+                     #                                       0:size_interface[1], :]
                     """"self.layer_uderivx[:, :, loop_count + i, :] = jet_interface.layer_uderivx[0:size_interface[0],
                                                             0:size_interface[1], :]
                     self.layer_uderivy[:, :, loop_count + i, :] = jet_interface.layer_uderivy[0:size_interface[0],
@@ -141,6 +150,47 @@ class DataProcessor_Conditional:
                     self.layer_vderivy[:, :, loop_count + i, :] = jet_interface.layer_vderivy[0:size_interface[0],
                                                             0:size_interface[1], :]"""
                     self.slope_cond[0:shp_curr[1], loop_count + i] = jet_interface.slope_cond[0:size_interface[1]]
+                    
+                    # Engulfment sites
+                    if shp_arr_engulf[1] >= shp_curr_engulf[1]:
+                        self.layer_x_engulf[:, 0:shp_curr_engulf[1], loop_count + i, :] = jet_interface.layer_x_engulf
+                        self.layer_y_engulf[:, 0:shp_curr_engulf[1], loop_count + i, :] = jet_interface.layer_y_engulf
+                        self.layer_U_engulf[:, 0:shp_curr_engulf[1], loop_count + i, :] = jet_interface.layer_U_engulf
+                        self.layer_V_engulf[:, 0:shp_curr_engulf[1], loop_count + i, :] = jet_interface.layer_V_engulf                       
+                        self.slope_cond_engulf[0:shp_curr_engulf[1], loop_count + i] = jet_interface.slope_cond_engulf
+                    elif shp_arr_engulf[1] < shp_curr_engulf[1]:
+                        self.layer_x_engulf = np.append(self.layer_x_engulf, np.zeros(
+                            (shp_arr_engulf[0], shp_curr_engulf[1] - shp_arr_engulf[1], shp_arr_engulf[2], shp_arr_engulf[3])), axis=1)
+                        self.layer_y_engulf = np.append(self.layer_y_engulf,
+                                                 np.zeros(
+                                                     (shp_arr_engulf[0], shp_curr_engulf[1] - shp_arr_engulf[1], shp_arr_engulf[2], shp_arr_engulf[3])),
+                                                 axis=1)
+                        self.layer_U_engulf = np.append(self.layer_U_engulf,
+                                                 np.zeros(
+                                                     (shp_arr_engulf[0], shp_curr_engulf[1] - shp_arr_engulf[1], shp_arr_engulf[2], shp_arr_engulf[3])),
+                                                 axis=1)
+                        self.layer_V_engulf = np.append(self.layer_V_engulf,
+                                                 np.zeros(
+                                                     (shp_arr_engulf[0], shp_curr_engulf[1] - shp_arr_engulf[1], shp_arr_engulf[2], shp_arr_engulf[3])),
+                                                 axis=1)
+                        self.slope_cond_engulf = np.append(self.slope_cond_engulf,
+                                                    np.zeros((shp_curr_engulf[1] - shp_arr_engulf[1], shp_arr_engulf[2])), axis=0)
+                        self.layer_x_engulf[:, :, loop_count + i, :] = jet_interface.layer_x_engulf
+                        self.layer_y_engulf[:, :, loop_count + i, :] = jet_interface.layer_y_engulf
+                        self.layer_U_engulf[:, :, loop_count + i, :] = jet_interface.layer_U_engulf
+                        self.layer_V_engulf[:, :, loop_count + i, :] = jet_interface.layer_V_engulf
+                        self.slope_cond_engulf[:, loop_count + i] = jet_interface.slope_cond_engulf
+
+                    else:
+                        self.layer_x_engulf[:, :, loop_count + i, :] = jet_interface.layer_x[0:size_engulf[0],
+                                                                0:size_engulf[1], :]
+                        self.layer_y_engulf[:, :, loop_count + i, :] = jet_interface.layer_y[0:size_engulf[0],
+                                                                0:size_engulf[1], :]
+                        self.layer_U_engulf[:, :, loop_count + i, :] = jet_interface.layer_U[0:size_engulf[0],
+                                                                0:size_engulf[1], :]
+                        self.layer_V_engulf[:, :, loop_count + i, :] = jet_interface.layer_V[0:size_engulf[0],
+                                                                0:size_engulf[1], :]                       
+                        self.slope_cond_engulf[0:shp_curr_engulf[1], loop_count + i] = jet_interface.slope_cond[0:size_engulf[1]]
             loop_count = loop_count + num_imgs[h]
         U_cond = np.mean(self.layer_U, axis=2)
         V_cond = np.mean(self.layer_V, axis=2)

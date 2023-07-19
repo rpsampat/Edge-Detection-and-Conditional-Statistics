@@ -15,7 +15,7 @@ class Settings:
         self.shear_calc = 'y'  # y/n
         self.LEA = 'y'  # y/n
         self.layer = "up"  # low/up
-        self.shear_num = 61  # number of points in shear layer
+        self.shear_num = 81  # number of points in shear layer
         self.m_x_loc = 6  # number of x locations to check within each image
         self.n_y_loc = 10  # number of y locations to check within each image
         self.x_img = 10  # mm

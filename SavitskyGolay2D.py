@@ -1,7 +1,9 @@
 #!python numbers=enable
 import numpy as np
 import scipy.signal
-
+"""
+This code is taken from https://scipy-cookbook.readthedocs.io/items/SavitzkyGolay.html
+"""
 def sgolay2d ( z, window_size, order, derivative=None):
     """
     """

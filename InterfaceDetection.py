@@ -38,9 +38,9 @@ class InterfaceDetection:
         edge = EdgeDetect.Edge()
         #u_sg = sgolay2d(u, window_size=5, order=2)
         #v_sg = sgolay2d(v, window_size=5, order=2)
-        u_derivy, u_derivx = sgolay2d(u, window_size=5, order=2,derivative='both')
-        v_derivy, v_derivx = sgolay2d(v, window_size=5, order=2,derivative='both')
-        omega = v_derivx-u_derivy
+        #u_derivy, u_derivx = sgolay2d(u, window_size=3, order=2,derivative='both')
+        #v_derivy, v_derivx = sgolay2d(v, window_size=3, order=2,derivative='both')
+        #omega = v_derivx-u_derivy
         #u = u_sg
         #v= v_sg
         X_I, Y_I, img_proc0,dx,dy,x0,y0, contours, cluster_img = edge.data_detect(u,v,x,y,U,V,self.otsu_fact)
@@ -65,21 +65,26 @@ class InterfaceDetection:
 
         if plot_img=='y':
             plt.subplots()
-            plt.imshow(img_proc0)
+            img1=plt.imshow(img_proc0,cmap='jet')
             #plt.scatter((x_unq-x0)/dx,(y_unq-y0)/dy,c='r',s=15)
             #plt.scatter((X_I-x0)/dx,(Y_I-y0)/dy, c='k',s=5)
             plt.scatter((X_out - x0) / dx, (Y_out - y0) / dy, c='k', s=5)
-            plt.colorbar
+            plt.title("Detection value")
+            plt.colorbar(img1)
 
             plt.subplots()
-            plt.imshow(u)
-            plt.colorbar
+            img2 = plt.imshow(u,cmap='jet')
+            plt.scatter((X_out - x0) / dx, (Y_out - y0) / dy, c='k', s=5)
+            plt.quiver((x[::5,::5]-x0)/dx,(y[::5,::5]-y0)/dy,u[::5,::5],v[::5,::5],angles='xy', scale_units='xy', scale=1)
+            plt.title("U(m/s)")
+            plt.colorbar(img2)
 
         #plt.show()
         #self.plot_interface(v, y[:, 0], X_I, Y_I)
         dx_cond = dx/2.0
         dy_cond = dy/2.0
-        self.ShearLayer(X_out, Y_out,m,grad2,x, y, u, v,dx_cond,dy_cond,x0,y0,cluster_img,omega,u_derivy,u_derivx,v_derivy, v_derivx, win_cond)
+        #self.ShearLayer(X_out, Y_out,m,grad2,x, y, u, v,dx_cond,dy_cond,x0,y0,cluster_img,omega,u_derivy,u_derivx,v_derivy, v_derivx, win_cond)
+        self.ShearLayer(X_out, Y_out, m, grad2, x, y, u, v, dx_cond, dy_cond, x0, y0, cluster_img, win_cond)
         print('Max u=',np.max(u))
         """quant = (Y_out - Y_out[0])#np.sqrt((Y_out - Y_out[0])**2+(X_out-X_out[0])**2.0)
         yf = np.abs(fftshift(fft(quant)))/len(X_out)
@@ -198,9 +203,12 @@ class InterfaceDetection:
                                         x_cont_arr[k] - x_cont_arr[k-1]) ** 2.0)
                                     grad2 = abs(y2prime) / ((1 + slope ** 2.0) ** 1.5)
                                 except:
-                                    slope = float('inf')
-                                    grad2 = float(y_cont_arr[k+1] + y_cont_arr[k - 1])#float(y_cont_arr[k+1] + y_cont_arr[k - 1] - 2 * y_cont_arr[k]) / (float(
-                                        #x_cont_arr[k+1] - x_cont_arr[k]) ** 2.0)
+                                    try:
+                                        slope = float('inf')
+                                        grad2 = float(y_cont_arr[k+1] + y_cont_arr[k - 1])#float(y_cont_arr[k+1] + y_cont_arr[k - 1] - 2 * y_cont_arr[k]) / (float(
+                                            #x_cont_arr[k+1] - x_cont_arr[k]) ** 2.0)
+                                    except:
+                                        continue
                         m.append(1.0*slope)
                         m_2nd.append(1.0*grad2)
                         X_out.append(x0*dx+x00)
@@ -414,7 +422,7 @@ class InterfaceDetection:
 
         return x2, y2
 
-    def ShearLayer(self, X_I, Y_I,m,grad2,x, y, u, v,dx,dy,x0,y0,cluster_img,omega,u_derivy,u_derivx,v_derivy, v_derivx, win_cond):
+    def ShearLayer(self, X_I, Y_I,m,grad2,x, y, u, v,dx,dy,x0,y0,cluster_img, win_cond):
         edge_length = len(Y_I) #len(x[0,:])
         self.skipped_lines_sub = []
 
@@ -473,33 +481,48 @@ class InterfaceDetection:
         shp_cast = (shp_val[0],shp_val[1],shp_val[2])
         u_val = self.interpolate_array(points, u, interp_pts, shp_cast)
         v_val = self.interpolate_array(points, v, interp_pts, shp_cast)
-        omega_val = self.interpolate_array(points, omega, interp_pts, shp_cast)
+        #omega_val = self.interpolate_array(points, omega, interp_pts, shp_cast)
         """uderivx_val = self.interpolate_array(points, u_derivx, interp_pts, shp_cast)
         uderivy_val = self.interpolate_array(points, u_derivy, interp_pts, shp_cast)
         vderivx_val = self.interpolate_array(points, v_derivx, interp_pts, shp_cast)
         vderivy_val = self.interpolate_array(points, v_derivy, interp_pts, shp_cast)"""
         side_val = self.interpolate_array(points, cluster_img, interp_pts, shp_cast)
+        pos_loc = np.where(side_val>0)
+        neg_loc = np.where(side_val<0)
+        side_val[pos_loc]=10
+        side_val[neg_loc]=-10
         x_val_interp = np.reshape(x_val_interp, shp_cast)
         y_val_interp = np.reshape(y_val_interp, shp_cast)
         print("Ylayer length=",len(Y_I))
         print("layer shape=",np.shape(x_val_interp))
         # Inversion based on which side of the curve the starting point lies on
         side_arr = np.array(side_val[:, :, int(win_cond/2)])
-        off_side = np.where(side_arr[:,0] <0.95)[0]
-        doublecross_side = np.where(np.abs(side_arr[:,0]- side_arr[:,self.shear_num-1])<0.5)[0]
+        off_side = np.where(np.mean(side_arr[:,0:3],axis=1) <np.mean(side_arr[:,-4:-1],axis=1))[0]
         x_val_interp[off_side] = np.flip(x_val_interp[off_side], 1)
         y_val_interp[off_side] = np.flip(y_val_interp[off_side], 1)
         u_val[off_side] = np.flip(u_val[off_side], 1)
         v_val[off_side] = np.flip(v_val[off_side], 1)
-        omega_val[off_side] = np.flip(omega_val[off_side], 1)
+        #omega_val[off_side] = np.flip(omega_val[off_side], 1)
         # delete lines that cross interface twice
+        grad_cross = np.abs(np.diff(side_arr,axis=1))
+        high_cross_val,high_cross_counts = np.unique(np.where(grad_cross>4)[0],return_counts=True)
+        doublecross_side = high_cross_val[np.where(high_cross_counts>1)[0]]#np.abs(side_arr[:, 0] - side_arr[:, self.shear_num - 1]) < 0.5)[0]
+        # engulfment sites
+        x_val_interp_engulf = x_val_interp[doublecross_side]
+        y_val_interp_engulf = y_val_interp[doublecross_side]
+        u_val_engulf = u_val[doublecross_side]
+        v_val_engulf = v_val[doublecross_side]
+        side_val_engulf = side_val[doublecross_side]
+        slope_valid_engulf = slope_valid[doublecross_side]
+        # Accepted Nibbling sites
         x_val_interp = np.delete(x_val_interp,doublecross_side, 0)
         y_val_interp = np.delete(y_val_interp,doublecross_side, 0)
         u_val = np.delete(u_val,doublecross_side, 0)
         v_val = np.delete(v_val,doublecross_side, 0)
-        omega_val = np.delete(omega_val,doublecross_side, 0)
+        #omega_val = np.delete(omega_val,doublecross_side, 0)
         side_val = np.delete(side_val, doublecross_side, 0)
         slope_valid = np.delete(slope_valid, doublecross_side, 0)
+
         """uderivx_val[off_side] = np.flip(uderivx_val[off_side], 1)
         uderivy_val[off_side] = np.flip(uderivy_val[off_side], 1)
         vderivx_val[off_side] = np.flip(vderivx_val[off_side], 1)
@@ -510,13 +533,20 @@ class InterfaceDetection:
         self.layer_y = np.swapaxes(y_val_interp, 0,1)
         self.layer_U = np.swapaxes(u_val, 0,1)
         self.layer_V = np.swapaxes(v_val, 0,1)
-        self.layer_omega= np.swapaxes(omega_val, 0,1)
+        #self.layer_omega= np.swapaxes(omega_val, 0,1)
         """self.layer_uderivx = np.swapaxes(uderivx_val, 0, 1)
         self.layer_uderivy = np.swapaxes(uderivy_val, 0, 1)
         self.layer_vderivx = np.swapaxes(vderivx_val, 0, 1)
         self.layer_vderivy = np.swapaxes(vderivy_val, 0, 1)"""
         self.side_val = np.swapaxes(side_val, 0,1)
         self.slope_cond = slope_valid
+        # Engulfment sites
+        self.layer_x_engulf = np.swapaxes(x_val_interp_engulf, 0, 1)
+        self.layer_y_engulf = np.swapaxes(y_val_interp_engulf, 0, 1)
+        self.layer_U_engulf = np.swapaxes(u_val_engulf, 0, 1)
+        self.layer_V_engulf = np.swapaxes(v_val_engulf, 0, 1)
+        self.side_val_engulf = np.swapaxes(side_val_engulf, 0, 1)
+        self.slope_cond_engulf = slope_valid_engulf
         self.Y_plot = np.tile(np.arange(1, self.shear_num + 1), (1, self.num_pos)) - (self.shear_num / 2)
 
     def ShearLayer_archived(self, X_I, Y_I, m, x, y, u, v, dx, dy, x0, y0):

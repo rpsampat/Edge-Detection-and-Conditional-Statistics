@@ -175,8 +175,8 @@ class Edge:
         # print("Unique counts=",unique_counts)
         core_samp = list(db.core_sample_indices_)
         shp_norm = img_normalized.shape
-        img_arr = np.ones((shp_norm[0],shp_norm[1]))
-        img_arr[img_ind[0][cluster_ind], img_ind[1][cluster_ind]]=0
+        img_arr = np.ones((shp_norm[0],shp_norm[1]))*10
+        img_arr[img_ind[0][cluster_ind], img_ind[1][cluster_ind]]=-10
 
         # currently returning only largest cluster, so most likely upper edge interface
 
@@ -323,7 +323,9 @@ class Edge:
         :return:
         """
         #vel_mag = (np.add(np.power(u-U, 2.0), np.power(v-V, 2.0)))
-        vel_mag = (np.add(np.power(u, 2.0), np.power(v, 2.0)))
+        max_vel = np.max(u,axis=0)
+        min_ke = np.min(u**2.0,axis=0)
+        vel_mag = (np.add(np.power(u, 2.0), np.power(v, 2.0))-min_ke)/(max_vel**2.0)
 
         #vel_mag = np.subtract(vel_mag,np.min(vel_mag))
         x_edge, y_edge, img_proc0, contours, cluster_img = self.detect(vel_mag, plot_img='n',otsu_fact=otsu_fact)

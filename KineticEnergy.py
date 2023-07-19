@@ -127,6 +127,25 @@ def turbulence_2ndorder_2d(uprime, vprime):
 
     return u1u1, u1u2, u1u3, u2u1, u2u2, u2u3, u3u1, u3u2, u3u3
 
+def turbulence_3rdorder_2d(uprime, vprime):
+    u1u1u1= uprime*uprime*uprime
+    u1u1u2 = uprime*uprime*vprime
+    u2u2u2 = vprime*vprime*vprime
+    u2u1u2 = vprime*uprime*vprime
+
+    u1u1u1 = (np.mean(u1u1u1,axis=-2))
+    u1u1u2 = (np.mean(u1u1u2, axis=-2))
+    u2u2u2 = (np.mean(u2u2u2, axis=-2))
+    u2u1u2 = (np.mean(u2u1u2, axis=-2))
+    u1u1u3 = u1u1u2
+    u2u2u3 = u2u2u2
+    u3u3u3 = 0.0*u2u2u2
+    u3u1u3 = 0.0*u2u1u2
+    u3u2u3 = 0.0*u2u1u2
+
+
+    return u1u1u1, u1u1u2, u1u1u3, u2u2u2, u2u1u2, u2u2u3, u3u3u3, u3u1u3, u3u2u3
+
 def ke_budget_terms(U,V,uprime,vprime,dx,dy,U_inst,V_inst,omega_inst):
     ke = 0.5*(U**2 + V**2)
     u1u1, u1u2, u1u3, u2u1, u2u2, u2u3, u3u1, u3u2, u3u3 = turbulence_2ndorder(uprime, vprime)
@@ -221,6 +240,18 @@ def derivative_2d_data(Z,dx,dy):
         d2Zdx2 = (Z[:,:,:,2:]+Z[:,:,:,:-2]-2*Z[:,:,:,1:-1])/(dx**2.0)
         d2Zdy2 = (Z[2:, :, :, :] + Z[:-2, :, :, :] - 2 * Z[1:-1, :, :, :]) / (dy ** 2.0)
         d2Zdxdy = (Z[2:,:,:,2:]-Z[:-2,:,:,:-2])/(2*dx*dy)-Z[1:-1, :, :, 1:-1]/(dx*dy)-0.5*(d2Zdx2[1:-1,:,:,:]*dx**2.0+d2Zdy2[:,:,:,1:-1]*dy**2.0)
+        d2Zdz2 = np.zeros_like(d2Zdy2)
+        dZdz = np.zeros_like(dZdy)
+        d2Zdxdz = np.zeros_like(d2Zdxdy)
+        d2Zdydz = np.zeros_like(d2Zdxdy)
+        shp_arr1 = np.shape(d2Zdxdy)  # 5
+        shp_arr2 = np.shape(d2Zdy2)  # 7
+
+        return dZdx[1:-1, :, :, int(shp_arr1[3] / 2)], dZdy[:, :, :, int(shp_arr2[3] / 2)], dZdz[:, :, :, int(shp_arr2[3] / 2)], \
+               d2Zdx2[1:-1, :, :, int(shp_arr1[3] / 2)], d2Zdy2[:, :, :, int(shp_arr2[3] / 2)], d2Zdz2[:, :, :,
+                                                                                          int(shp_arr2[3] / 2)], \
+               d2Zdxdy[:, :, :, int(shp_arr1[3] / 2)], d2Zdxdz[:, :, :, int(shp_arr1[3] / 2)], d2Zdydz[:, :, :,
+                                                                                         int(shp_arr1[3] / 2)]
     except:
         dZdx = (Z[:, :, 2:] - Z[:, :, :-2]) / (2 * dx)
         dZdy = (Z[2:, :, :] - Z[:-2, :, :]) / (2 * dy)
@@ -228,24 +259,25 @@ def derivative_2d_data(Z,dx,dy):
         d2Zdy2 = (Z[2:, :, :] + Z[:-2, :, :] - 2 * Z[1:-1, :, :]) / (dy ** 2.0)
         d2Zdxdy = (Z[2:, :, 2:] - Z[:-2, :, :-2]) / (2 * dx * dy) - Z[1:-1, :, 1:-1] / (dx * dy) - 0.5 * (
                     d2Zdx2[1:-1, :, :] * dx ** 2.0 + d2Zdy2[:, :, 1:-1] * dy ** 2.0)
+        d2Zdz2 = np.zeros_like(d2Zdy2)
+        dZdz = np.zeros_like(dZdy)
+        d2Zdxdz = np.zeros_like(d2Zdxdy)
+        d2Zdydz = np.zeros_like(d2Zdxdy)
+        shp_arr1 = np.shape(d2Zdxdy)  # 5
+        shp_arr2 = np.shape(d2Zdy2)  # 7
 
-    d2Zdz2 = np.zeros_like(d2Zdy2)
-    dZdz = np.zeros_like(dZdy)
-    d2Zdxdz = np.zeros_like(d2Zdxdy)
-    d2Zdydz = np.zeros_like(d2Zdxdy)
-    shp_arr1 = np.shape(d2Zdxdy)#5
-    shp_arr2 = np.shape(d2Zdy2)#7
 
-    return dZdx[1:-1,:,int(shp_arr1[2]/2)], dZdy[:,:,int(shp_arr2[2]/2)], dZdz[:,:,int(shp_arr2[2]/2)],\
-           d2Zdx2[1:-1,:,int(shp_arr1[2]/2)], d2Zdy2[:,:,int(shp_arr2[2]/2)], d2Zdz2[:,:,int(shp_arr2[2]/2)],\
-           d2Zdxdy[:,:,int(shp_arr1[2]/2)], d2Zdxdz[:,:,int(shp_arr1[2]/2)], d2Zdydz[:,:,int(shp_arr1[2]/2)]
+
+        return dZdx[1:-1,:,int(shp_arr1[2]/2)], dZdy[:,:,int(shp_arr2[2]/2)], dZdz[:,:,int(shp_arr2[2]/2)],\
+               d2Zdx2[1:-1,:,int(shp_arr1[2]/2)], d2Zdy2[:,:,int(shp_arr2[2]/2)], d2Zdz2[:,:,int(shp_arr2[2]/2)],\
+               d2Zdxdy[:,:,int(shp_arr1[2]/2)], d2Zdxdz[:,:,int(shp_arr1[2]/2)], d2Zdydz[:,:,int(shp_arr1[2]/2)]
 
 def domain_sgolayy(ynum,Z):
     win = 5
     order = 2
     arr=Z[:,ynum,:]
     Z_out = sgolay2d(arr, win, order, derivative=None)
-    dZdx, dZdy = sgolay2d(arr, win, order, derivative='both')
+    dZdy, dZdx = sgolay2d(arr, win, order, derivative='both')
 
     return Z_out,dZdx,dZdy
 
@@ -269,16 +301,45 @@ def savitzkygolay_local(Z):
     dZdx = np.swapaxes(np.stack(Z_out[:, :, 1, :, :]), 0, 2)
     dZdy = np.swapaxes(np.stack(Z_out[:, :, 2, :, :]), 0, 2)
 
-    return Z_ret
+    return Z_ret,dZdx,dZdy
+
+def savitzkygolay_meanlocal(Z):
+    # Apply Savitzky golay filter on each edge around the points extracted in a window around the points along the
+    # local slope. The other points need not lie along the edge.
+    shp = np.shape(Z)
+    domain_vect = np.vectorize(domain_sgolayy, otypes=[object], excluded=['Z'])
+    yrange = range(shp[1])
+    Z_out = domain_vect(ynum=yrange, Z=Z)
+    Z_out = np.stack(Z_out)
+    Z_ret = np.swapaxes((Z_out[:, 0, :, :]), 0, 1)
+    dZdx = np.swapaxes((Z_out[:, 1, :, :]), 0, 1)
+    dZdy = np.swapaxes((Z_out[:, 2, :, :]), 0, 1)
+
+    return Z_ret, dZdx,dZdy
 
 def subtract_mean(val,U,U_mean):
     uprime = np.subtract(U[:,:,val,:], U_mean)
 
     return uprime
+def field_smooth_turb(U_inst, V_inst):
+    U_inst_smooth, dU_instdx, dU_instdy = savitzkygolay_local(U_inst)
+    V_inst_smooth, dV_instdx, dV_instdy = savitzkygolay_local(V_inst)
+    U = np.mean(U_inst_smooth, axis=2)
+    V = np.mean(V_inst_smooth, axis=2)
+    # mean_inst_U = np.mean(U_inst[:,100,:,:],axis=1)
 
-def ke_budget_terms_svg_input(dx, dy, U_inst, V_inst, omega_inst):#,uderivx,uderivy,vderivx,vderivy):
-    U_inst_smooth = savitzkygolay_local(U_inst)
-    V_inst_smooth = savitzkygolay_local(V_inst)
+    # plt.show()
+    shp_arr = np.shape(U_inst_smooth)
+    subt_mean_vect = np.vectorize(subtract_mean, otypes=[object], excluded=['U', 'U_mean'])
+    val_range = range(shp_arr[2])
+    uprime = np.moveaxis(np.stack(subt_mean_vect(val=val_range, U=U_inst_smooth, U_mean=U)), [0, 3], [-2, -1])
+    vprime = np.moveaxis(np.stack(subt_mean_vect(val=val_range, U=V_inst_smooth, U_mean=V)), [0, 3], [-2, -1])
+
+    return uprime,vprime
+
+def ke_budget_terms_svg_input(dx, dy, U_inst, V_inst):#,uderivx,uderivy,vderivx,vderivy):
+    U_inst_smooth,dU_instdx,dU_instdy= savitzkygolay_local(U_inst)
+    V_inst_smooth,dV_instdx,dV_instdy = savitzkygolay_local(V_inst)
     U = np.mean(U_inst_smooth,axis=2)
     V = np.mean(V_inst_smooth,axis=2)
     #mean_inst_U = np.mean(U_inst[:,100,:,:],axis=1)
@@ -293,10 +354,9 @@ def ke_budget_terms_svg_input(dx, dy, U_inst, V_inst, omega_inst):#,uderivx,uder
     #dVdx, dVdy, dVdz, d2Vdx2, d2Vdy2, d2Vdz2, d2Vdxdy, d2Vdxdz, d2Vdydz = derivative_2d_data(V_inst_smooth,dx,dy)
     ke = 0.5 * (U ** 2 + V ** 2)
     u1u1, u1u2, u1u3, u2u1, u2u2, u2u3, u3u1, u3u2, u3u3 = turbulence_2ndorder_2d(uprime, vprime)
+    # Derivatives of mean field
     dUdx, dUdy, dUdz, d2Udx2, d2Udy2, d2Udz2, d2Udxdy, d2Udxdz, d2Udydz = derivative_2d_data(U, dx, dy)
     dVdx, dVdy, dVdz, d2Vdx2, d2Vdy2, d2Vdz2, d2Vdxdy, d2Vdxdz, d2Vdydz = derivative_2d_data(V, dx, dy)
-    dudx, dudy, dudz, d2udx2, d2udy2, d2udz2, d2udxdy, d2udxdz, d2udydz = derivative_2d_data(uprime, dx, dy)
-    dvdx, dvdy, dvdz, d2vdx2, d2vdy2, d2vdz2, d2vdxdy, d2vdxdz, d2vdydz = derivative_2d_data(vprime, dx, dy)
     dKdx, dKdy, dKdz, d2Kdx2, d2Kdy2, d2Kdz2, d2Kdxdy, d2Kdxdz, d2Kdydz = derivative_2d_data(ke, dx, dy)
     dWdx = dVdx
     dWdy = dVdy
@@ -366,16 +426,64 @@ def ke_budget_terms_svg_input(dx, dy, U_inst, V_inst, omega_inst):#,uderivx,uder
 
     #dUdx, dUdy, dUdz, d2Udx2, d2Udy2, d2Udz2, d2Udxdy, d2Udxdz, d2Udydz = derivatives_inst(U_inst, dx, dy)
     #dVdx, dVdy, dVdz, d2Vdx2, d2Vdy2, d2Vdz2, d2Vdxdy, d2Vdxdz, d2Vdydz = derivatives_inst(V_inst, dx, dy)
-    Omega_mean = np.mean((omega_inst), axis=2)
+    Omega_mean = np.mean(dV_instdx[:,:,:,int(shp_arr[-1]/2)]-dU_instdy[:,:,:,int(shp_arr[-1]/2)], axis=2)#np.mean((omega_inst), axis=2)
     Omeage_modulus_mean = 0#np.mean(np.abs(dVdx - dUdy), axis=2)
     # Subtraction by Broadcasting. Taking transpose becomes essential to subtract a mean matrix from a 3D dataset.
-    omega = np.transpose(omega_inst)  # (dVdx-dUdy)
+    omega = np.transpose(dV_instdx[:,:,:,int(shp_arr[-1]/2)]-dU_instdy[:,:,:,int(shp_arr[-1]/2)])#omega_inst)  # (dVdx-dUdy)
     Omega_subt = np.transpose(Omega_mean)
     enstrophy = np.power(np.transpose(omega - Omega_subt), 2.0)
     omega = np.mean(enstrophy, axis=2)
-    enstrophy_flux = np.mean(enstrophy * (vprime[:, :, :, int(shp_arr[-1]/2)]), axis=2)
+    enstrophy_flux = np.mean(np.transpose(np.transpose(enstrophy) * np.transpose(vprime[:, :, :, int(shp_arr[-1]/2)])), axis=2)
 
-    return K_td, K_t, K_nu, K_nu_t, K_adv, omega, Omega_mean, Omeage_modulus_mean, enstrophy_flux
+    return K_td, K_t, K_nu, K_nu_t, K_adv, omega, Omega_mean, Omeage_modulus_mean, enstrophy_flux, uprime, vprime
+
+def turbulentkineticenergy(uprime,vprime,dx,dy):
+    nu = 1.5e-5
+    dudx, dudy, dudz, d2udx2, d2udy2, d2udz2, d2udxdy, d2udxdz, d2udydz = derivative_2d_data(uprime, dx, dy)
+    dvdx, dvdy, dvdz, d2vdx2, d2vdy2, d2vdz2, d2vdxdy, d2vdxdz, d2vdydz = derivative_2d_data(vprime, dx, dy)
+
+    u1u1u1, u1u1u2, u1u1u3, u2u2u2, u2u1u2, u2u2u3, u3u3u3, u3u1u3, u3u2u3 = turbulence_3rdorder_2d(uprime, vprime)
+
+    win = 5
+    order = 2
+    u1u1u1, du1u1u1dx, du1u1u1dy = savitzkygolay_meanlocal(u1u1u1)
+    u1u1u2, du1u1u2dx, du1u1u2dy = savitzkygolay_meanlocal(u1u1u2)
+    u1u1u3, du1u1u3dx, du1u1u3dy = savitzkygolay_meanlocal(u1u1u3)
+    u2u1u2, du2u1u2dx, du2u1u2dy = savitzkygolay_meanlocal(u2u1u2)
+    u2u2u2, du2u2u2dx, du2u2u2dy = savitzkygolay_meanlocal(u2u2u2)
+    u2u2u3, du2u2u3dx, du2u2u3dy = savitzkygolay_meanlocal(u2u2u3)
+    du1u1u3dz = du1u1u2dy
+    du2u2u3dz = du2u2u3dy
+    #Derivative of instantaneous
+    du1dx, du1dy, du1dz, d2u1dx2, d2u1dy2, d2u1dz2, d2u1dxdy, d2u1dxdz, d2u1dydz = derivative_2d_data(uprime, dx, dy)
+    du2dx, du2dy, du2dz, d2u2dx2, d2u2dy2, d2u2dz2, d2u2dxdy, d2u2dxdz, d2u2dydz = derivative_2d_data(vprime, dx, dy)
+    du3dx, du3dy, du3dz, d2u3dx2, d2u3dy2, d2u3dz2, d2u3dxdy, d2u3dxdz, d2u3dydz = derivative_2d_data(0.0*vprime, dx, dy)
+
+    # Derivative of mean quantity: d<Z>dx
+    """du1u1u1dx, du1u1u1dy, du1u1u1dz, d2u1u1u1dx2, d2u1u1u1dy2, d2u1u1u1dz2, d2u1u1u1dxdy, d2u1u1u1dxdz, d2u1u1u1dydz = derivative_2d_data(u1u1u1, dx, dy)
+    du1u1u2dx, du1u1u2dy, du1u1u2dz, d2u1u1u2dx2, d2u1u1u2dy2, d2u1u1u2dz2, d2u1u1u2dxdy, d2u1u1u2dxdz, d2u1u1u2dydz = derivative_2d_data(u1u1u2, dx, dy)
+    du1u1u3dx, du1u1u3dy, du1u1u3dz, d2u1u1u3dx2, d2u1u1u3dy2, d2u1u1u3dz2, d2u1u1u3dxdy, d2u1u1u3dxdz, d2u1u1u3dydz = derivative_2d_data(u1u1u3, dx, dy)
+    du2u1u2dx, du2u1u2dy, du2u1u2dz, d2u2u1u2dx2, d2u2u1u2dy2, d2u2u1u2dz2, d2u2u1u2dxdy, d2u2u1u2dxdz, d2u2u1u2dydz = derivative_2d_data(u2u1u2, dx, dy)
+    du2u2u2dx, du2u2u2dy, du2u2u2dz, d2u2u2u2dx2, d2u2u2u2dy2, d2u2u2u2dz2, d2u2u2u2dxdy, d2u2u2u2dxdz, d2u2u2u2dydz = derivative_2d_data(u2u2u2, dx, dy)
+    du2u2u3dx, du2u2u3dy, du2u2u3dz, d2u2u2u3dx2, d2u2u2u3dy2, d2u2u2u3dz2, d2u2u2u3dxdy, d2u2u2u3dxdz, d2u2u2u3dydz = derivative_2d_data(u2u2u3, dx, dy)
+    du3u1u3dx, du3u1u3dy, du3u1u3dz, d2u3u1u3dx2, d2u3u1u3dy2, d2u3u1u3dz2, d2u3u1u3dxdy, d2u3u1u3dxdz, d2u3u1u3dydz = derivative_2d_data(u3u1u3, dx, dy)
+    du3u2u3dx, du3u2u3dy, du3u2u3dz, d2u3u2u3dx2, d2u3u2u3dy2, d2u3u2u3dz2, d2u3u2u3dxdy, d2u3u2u3dxdz, d2u3u2u3dydz = derivative_2d_data(u3u2u3, dx, dy)
+    du3u3u3dx, du3u3u3dy, du3u3u3dz, d2u3u3u3dx2, d2u3u3u3dy2, d2u3u3u3dz2, d2u3u3u3dxdy, d2u3u3u3dxdz, d2u3u3u3dydz = derivative_2d_data(u3u3u3, dx, dy)"""
+
+    TKE_turb_transp1 = -0.5*(du1u1u1dx[:,:,2]+du1u1u2dy[:,:,2]+du1u1u3dz[:,:,2])
+    TKE_turb_transp2 = -0.5*(du2u1u2dx[:,:,2]+du2u2u2dy[:,:,2]+du2u2u3dz[:,:,2])
+    TKE_turb_transp3 = TKE_turb_transp2 *0.0#-0.5*(du3u1u3dx+du3u2u3dy+du3u3u3dz)
+    TKE_dissip = np.mean(-nu*(du1dx*du1dx+du1dy*du1dy+du1dz*du1dz+\
+                 du2dx*du2dx+du2dy*du2dy+du2dz*du2dz+\
+                 du3dx*du3dx + du3dy*du3dy+du3dz*du3dz+\
+                 du1dx*du1dx+du1dy*du2dx+du1dz*du3dx+\
+                 du2dx*du1dy+du2dy*du2dy+du2dz*du3dy+\
+                 du3dx*du1dz+du3dy*du2dz+du3dz*du3dz),axis = 2)
+
+    return TKE_turb_transp1,TKE_turb_transp2,TKE_turb_transp3,TKE_dissip
+                
+                
+
 
 
 def budget(obj, U, V, dx, dy, u_rms, v_rms, uv_mean, nu, yval2, xval2, tke_proc, tke):

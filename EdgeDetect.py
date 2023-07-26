@@ -324,8 +324,10 @@ class Edge:
         """
         #vel_mag = (np.add(np.power(u-U, 2.0), np.power(v-V, 2.0)))
         max_vel = np.max(u,axis=0)
-        min_ke = np.min(u**2.0,axis=0)
-        vel_mag = (np.add(np.power(u, 2.0), np.power(v, 2.0))-min_ke)/(max_vel**2.0)
+        criteria = np.add(np.power(u, 2.0), np.power(v, 2.0))
+        min_ke = np.min(criteria, axis=0)
+        max_ke = np.max(criteria, axis=0)
+        vel_mag = (criteria-min_ke)/(max_ke)
 
         #vel_mag = np.subtract(vel_mag,np.min(vel_mag))
         x_edge, y_edge, img_proc0, contours, cluster_img = self.detect(vel_mag, plot_img='n',otsu_fact=otsu_fact)

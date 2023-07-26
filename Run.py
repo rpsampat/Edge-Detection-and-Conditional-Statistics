@@ -11,11 +11,11 @@ class Run:
     def __init__(self):
         self.drive = "P:/"
         self.folder = "JetinCoflow_V2/Exported/PIV_5000imgs/"
-        self.axial_location='20D'#5D,10D,15D,20D,30D,70D
+        self.axial_location='10D'#5D,10D,15D,20D,30D,70D
         self.rpm_coflow =['0','250','375','680']#0,250,375,680
         # should have number of inputs as number of folders for the given rpm and axial location
-        self.num_imgs=[[700],[250,250],[250,250],[250,125,125]]
-        self.otsu_fact=[10,8,8,6]
+        self.num_imgs=[[2000],[250,250],[250,250],[50,50,50]]
+        self.otsu_fact=[10,8,8,4]
         self.save_folder = "JetinCoflow_V2/Exported/PIV_5000imgs/Conditional_data/"
 
     def image_dir_list(self,axial_loc,rpm_coflow):
@@ -50,7 +50,7 @@ class Run:
         DP.processor(settings, header,otsu_fact)
         DA = DataAccess.DataAccess()
         num_imgs = np.sum(settings.num_inst)
-        strng = "rpm" + rpm_coflow + "_kebasis_otsuby"+str(otsu_fact) + "_numimgs" + str(num_imgs)+"_normalisedminsubdetectioncriteria_dx2_81pts"#+"sgolay_win3"
+        strng = "rpm" + rpm_coflow + "_kebasis_otsuby"+str(otsu_fact) + "_numimgs" + str(num_imgs)+"_normalisedminsubdetectioncriteria_2dx_101pts"#+"sgolay_win3"
         file_path2 = self.drive + self.save_folder + axial_location + '/' + strng + '.pkl'
         data = {'DP': DP, 'settings': settings}
         with open(file_path2, 'wb') as f:

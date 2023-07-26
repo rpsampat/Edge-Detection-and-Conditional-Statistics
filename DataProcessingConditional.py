@@ -95,7 +95,6 @@ class DataProcessor_Conditional:
                     self.layer_U_engulf = np.zeros((size_engulf[0], size_engulf[1], num_inst, win_size))
                     self.layer_V_engulf = np.zeros((size_engulf[0], size_engulf[1], num_inst, win_size))
                     self.slope_cond_engulf = np.zeros((size_engulf[1], num_inst))
-                    continue
                 try:
                     jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer,meanU, meanV,win_size)
                 except:
@@ -196,8 +195,8 @@ class DataProcessor_Conditional:
         V_cond = np.mean(self.layer_V, axis=2)
         #self.U = np.array(U_cond)
         #self.V = np.array(V_cond)
-        self.yval2 = np.mean(self.layer_y, axis=2)
-        self.xval2 = np.mean(self.layer_x, axis=2)
+        #self.yval2 = np.mean(self.layer_y, axis=2)
+        #self.xval2 = np.mean(self.layer_x, axis=2)
         """fig,ax = plt.subplots()
         img = ax.imshow(self.U)
         fig.colorbar(img)

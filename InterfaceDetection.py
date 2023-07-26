@@ -81,8 +81,8 @@ class InterfaceDetection:
 
         #plt.show()
         #self.plot_interface(v, y[:, 0], X_I, Y_I)
-        dx_cond = dx/2.0
-        dy_cond = dy/2.0
+        dx_cond = dx*1.0
+        dy_cond = dy*1.0
         #self.ShearLayer(X_out, Y_out,m,grad2,x, y, u, v,dx_cond,dy_cond,x0,y0,cluster_img,omega,u_derivy,u_derivx,v_derivy, v_derivx, win_cond)
         self.ShearLayer(X_out, Y_out, m, grad2, x, y, u, v, dx_cond, dy_cond, x0, y0, cluster_img, win_cond)
         print('Max u=',np.max(u))
@@ -430,22 +430,9 @@ class InterfaceDetection:
         self.v_inter = v
         self.x_inter = x
         self.y_inter = y
-
-        #y_search = y_dist[:, 0]
-        # forward difference
-        #m1 = np.diff(Y_I)#np.divide(np.diff(Y_I), np.diff(X_I))
-        #m1 = np.append(m1,m1[-1])
-        #m1 = np.concatenate(([m1[0]], m1))
-        # Central difference
-        #m1 = np.convolve(m1, np.ones(2) / 2, mode='valid')
-        m1=np.array(m)
-        """plt.subplots()
-        plt.scatter(X_I,m)
-        #plt.yscale('log')
-        plt.subplots()
-        plt.scatter(X_I,Y_I)"""
-        # Extracting points perpendicualr to local edge
-        edge_loc_iter_vect = np.vectorize(self.edge_loc_iter,otypes=[object],excluded=['dy','win_cond'])#,excluded=['x','y','u','v','dx','dy','search_pt_vect','neighbour_search_vect'])
+        m1=np.array(m) # slope of local edge
+        # Extracting points (coordinates) perpendicualr to local edge
+        edge_loc_iter_vect = np.vectorize(self.edge_loc_iter,otypes=[object],excluded=['dy','win_cond'])
         search_pt_vect = np.vectorize(self.search_points)
         neighbour_search_vect = np.vectorize(self.neighbour_search, otypes=[object])
         val= edge_loc_iter_vect(m1 =m1,x1 = X_I,y1 = Y_I,dy = dy,win_cond = win_cond)
@@ -455,14 +442,6 @@ class InterfaceDetection:
         ymax = np.max(y)
         ymin = np.min(y)
         # Checking for lines crossing the edge twice
-        """point_dist = np.vectorize(self.point_distance,otypes=[object], excluded=['X_I','Y_I','dx'])
-        #pts = point_dist(val[:, 0, :, 0],val[:, 1, :, 0],X_I=np.array(X_I),Y_I=np.array(Y_I),dx=dx)
-        pts = point_dist(point_x = val[:, :, int(win_cond/2), 0], point_y = val[:, :, int(win_cond/2), 1], X_I=np.array(X_I), Y_I=np.array(Y_I), dx=dx)
-        pts = np.stack(pts)
-        #pts[:,int(self.shear_num/2.0)] = np.zeros((np.shape(pts)[0]))
-        print("Pts shape=",np.shape(pts))
-        pts = np.sum(pts,axis=1)
-        pts_valid = np.where(pts<2)[0]"""
         x_coords = val[:, :, :, 0]#val[:, 0, :, :]
         y_coords = val[:, :, :, 1]  # val[:, 1, :, :]
         condition1 = np.logical_or(x_coords > xmax, x_coords < xmin)
@@ -475,18 +454,16 @@ class InterfaceDetection:
         y_val_interp = y_coords[valid_interp,:,:]#val[valid_interp,1,:,:]
         slope_valid = m1[valid_interp]
         shp_val = np.shape(x_val_interp)
+        # Interpolating values from velocity vector grid to conditional coordinate points
         interp_pts = list(zip(np.ndarray.flatten(x_val_interp), np.ndarray.flatten(y_val_interp)))
-        #interp_pts = list(zip(val[:, 0, :, :], val[:, 1, :, :]))
         points =(x[0,:],y[:,0])
         shp_cast = (shp_val[0],shp_val[1],shp_val[2])
         u_val = self.interpolate_array(points, u, interp_pts, shp_cast)
         v_val = self.interpolate_array(points, v, interp_pts, shp_cast)
-        #omega_val = self.interpolate_array(points, omega, interp_pts, shp_cast)
-        """uderivx_val = self.interpolate_array(points, u_derivx, interp_pts, shp_cast)
-        uderivy_val = self.interpolate_array(points, u_derivy, interp_pts, shp_cast)
-        vderivx_val = self.interpolate_array(points, v_derivx, interp_pts, shp_cast)
-        vderivy_val = self.interpolate_array(points, v_derivy, interp_pts, shp_cast)"""
         side_val = self.interpolate_array(points, cluster_img, interp_pts, shp_cast)
+        # Assigning value to point based on which side of the interface it lies on. This is based on the value assigned
+        # to the cluster. Value assigned is+/-10 to increase the range to be able to identify points crrectly despite
+        # looking at interpolated values od side_val.
         pos_loc = np.where(side_val>0)
         neg_loc = np.where(side_val<0)
         side_val[pos_loc]=10
@@ -497,6 +474,7 @@ class InterfaceDetection:
         print("layer shape=",np.shape(x_val_interp))
         # Inversion based on which side of the curve the starting point lies on
         side_arr = np.array(side_val[:, :, int(win_cond/2)])
+        # checking the first and last four values of the extracted line for orientation
         off_side = np.where(np.mean(side_arr[:,0:3],axis=1) <np.mean(side_arr[:,-4:-1],axis=1))[0]
         x_val_interp[off_side] = np.flip(x_val_interp[off_side], 1)
         y_val_interp[off_side] = np.flip(y_val_interp[off_side], 1)
@@ -539,7 +517,7 @@ class InterfaceDetection:
         self.layer_vderivx = np.swapaxes(vderivx_val, 0, 1)
         self.layer_vderivy = np.swapaxes(vderivy_val, 0, 1)"""
         self.side_val = np.swapaxes(side_val, 0,1)
-        self.slope_cond = slope_valid
+        self.slope_cond = slope_valid # slope of edge
         # Engulfment sites
         self.layer_x_engulf = np.swapaxes(x_val_interp_engulf, 0, 1)
         self.layer_y_engulf = np.swapaxes(y_val_interp_engulf, 0, 1)

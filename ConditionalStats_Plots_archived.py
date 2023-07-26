@@ -38,7 +38,7 @@ class ConditionalStats_Plot:
             strng = "rpm" + str(rpm_coflow) + "_kebasis_otsuby2_numimgs500"
             file_path2 = loc + strng + '.pkl'
             with open(file_path2, 'rb') as f:
-                mat = joblib.load(f)
+                mat = pickle.load(f)
 
         self.DP = mat['DP']
         self.settings = mat['settings']
@@ -94,13 +94,7 @@ class ConditionalStats_Plot:
         self.Y = S_avg[self.lower_cutoff_x:self.upper_cutoff_x, self.lower_cutoff_y:self.upper_cutoff_y, 1]
         jet_center_x = 10
         mean_x_max = np.max(self.U[:, jet_center_x])
-
-        u_max = np.max(self.U,axis=0)
-        u_max_loc = [np.where(self.U[:,i]==u_max[i])[0][-1] for i in range(len(u_max))]
-        y_half_loc = [np.where(self.U[:,i]>u_max[i]/2.0)[0][-1] for i in range(len(u_max))]
-        self.y_half = np.array([self.Y[y_half_loc[i],i]-self.Y[u_max_loc[i],i] for i in range(len(u_max))])
-        self.jet_center = np.array([self.Y[u_max_loc[i],i] for i in range(len(u_max))])
-        #print(self.y_half)
+        self.jet_center = self.Y[self.U[:, jet_center_x] == mean_x_max, jet_center_x]
         #plt.subplots()
         #plt.imshow(self.V)
 
@@ -135,24 +129,20 @@ class ConditionalStats_Plot:
         #plt.imshow(self.V)
 
     def velocity_transform_coords(self,U,V,slope):
-        theta = np.swapaxes(np.arctan(-slope),0,1)
-        #neg_ind = np.where(theta < 0)[0]
-        #theta[neg_ind] = theta[neg_ind] + np.pi
+        theta = np.swapaxes(np.arctan(slope),0,1)
         U_swap = np.swapaxes(U,1,3)
         V_swap = np.swapaxes(V,1,3)
-        U_transf = U_swap*np.sin(theta)-V_swap*np.cos(theta)
-        V_transf = U_swap * np.cos(theta) + V_swap * np.sin(theta)
+        U_transf = U_swap*np.sin(theta)+V_swap*np.cos(theta)
+        V_transf = -U_swap * np.cos(theta) + V_swap * np.sin(theta)
 
         return np.swapaxes(U_transf,1,3),np.swapaxes(V_transf,1,3)
 
     def velocity_transform_coords_2d(self,U,V,slope):
-        theta = np.arctan(-slope)
-        neg_ind = np.where(theta<0)[0]
-        theta[neg_ind] = theta[neg_ind]+np.pi
+        theta = np.arctan(slope)
         U_swap = np.swapaxes(U,1,2)
         V_swap = np.swapaxes(V,1,2)
-        U_transf = U_swap*np.sin(theta)-V_swap*np.cos(theta)
-        V_transf = +U_swap * np.cos(theta) + V_swap * np.sin(theta)
+        U_transf = U_swap*np.sin(theta)+V_swap*np.cos(theta)
+        V_transf = -U_swap * np.cos(theta) + V_swap * np.sin(theta)
 
         return np.swapaxes(U_transf,2,1),np.swapaxes(V_transf,2,1)
 
@@ -214,8 +204,7 @@ class ConditionalStats_Plot:
         U_avg = U[:,x_avg,loc,:]
 
         return U_avg
-
-    def data_extract(self,loc_mm,h_win,dx,dy):
+    def data_extract(self,loc_mm,h_win):
         shp_set = np.shape(self.DP.layer_U)
         xval_arr = self.DP.layer_x[int(shp_set[0] / 2), :,:, int(shp_set[3] / 2)]
         edge_loc_avg = np.vectorize(self.edge_locations_to_avg, otypes=[object], excluded=['X', 'lim_up','lim_low','U'])
@@ -229,36 +218,18 @@ class ConditionalStats_Plot:
         #y_layer = np.hstack(edge_loc_avg(loc=frame_ext_list,X=xval_arr,lim_up=loc_mm+h_win,lim_low=loc_mm-h_win,U = self.DP.layer_V))
         m = np.hstack(edge_loc_avg_slope(loc=frame_ext_list, X=xval_arr, lim_up=loc_mm + h_win, lim_low=loc_mm - h_win,m=self.DP.slope_cond))
         U,V = self.velocity_transform_coords_2d(U_ext, V_ext, m)
-        #U = U[::2,:,:]
-        #V = V[::2,:,:]
         print(U.shape)
         print(m.shape)
-        shp_arr = U.shape
-        U_mean = np.mean(U[:,:,int(shp_arr[-1]/2)],axis=1)
-        u_rms = np.sqrt(np.mean(U[:,:,int(shp_arr[-1]/2)]**2.0,axis=1)-U_mean**2.0)
-        V_mean = np.mean(V[:, :, int(shp_arr[-1]/2)], axis=1)
-        v_rms = np.sqrt(np.mean(V[:, :, int(shp_arr[-1]/2)] ** 2.0, axis=1) - V_mean ** 2.0)
-        uv = np.mean(U[:,:,int(shp_arr[-1]/2)]*V[:,:,int(shp_arr[-1]/2)],axis=1)-U_mean*V_mean
-
-        K_td, K_t, K_nu, K_nu_t, K_adv, enstrophy, vorticity, vorticity_mod, enstrophy_flux, uprime, vprime = KE.ke_budget_terms_svg_input(
-            dx, dy, U, V)
-
-        """fig,ax= plt.subplots()
+        U_mean = np.mean(U[:,:,2],axis=1)
+        u_rms = np.sqrt(np.mean(U[:,:,2]**2.0,axis=1)-U_mean**2.0)
+        fig,ax= plt.subplots()
         ax.plot(U_mean)
         ax.set_ylabel('U')
         fig1,ax1 = plt.subplots()
         ax1.plot(u_rms)
-        ax1.set_ylabel('u\'')
-        fig2,ax2 = plt.subplots()
-        ax2.plot(V_mean)
-        ax2.set_ylabel('V')
-        fig3, ax3 = plt.subplots()
-        ax3.plot(uv)
-        ax3.set_ylabel('u\'v\'')"""
         #plt.show()
 
         #print(U)
-        return U_mean,V_mean,u_rms,v_rms,uv,K_td, K_t, K_nu, K_nu_t, K_adv, enstrophy, vorticity, vorticity_mod, enstrophy_flux
 
     def extract_data_compare(self):
         loc_dict = {0:"O:/JetinCoflow/rpm0_ax15D_centerline_dt35_1000_vloc1_1mmsheet_fstop4_PIV_MP(2x24x24_75ov)_5000imgs_20D=unknown/",
@@ -267,10 +238,10 @@ class ConditionalStats_Plot:
         leg_dict={0: 0, 375: 0.16, 680 : 0.33}
         loc =self.drive+self.folder+self.axial_location+'/'
         u_coflow_dict={0: 0, 375: 3.1953, 680: 6.6}
-        key_list = [0]#,0,0,0]#,375,680]#,375]
-        otsu_list = [10]#,8,10,50]
-        xloc = [35.0] # mm #,,680 100, 400, 550]  # self.DP.X_pos
-        h_win = 1.0  # +/- hwin (mm)
+        key_list = [0]#,375,680]#,375]
+        otsu_list = [10]
+        xloc = [350] #,,680 100, 400, 550]  # self.DP.X_pos
+        h_win = 10  # +/- hwin
         """fig, ax = plt.subplots()
         img = ax.imshow(np.mean(self.DP.layer_U, axis=2)[:, :, 0])
         fig.colorbar(img)"""
@@ -282,7 +253,6 @@ class ConditionalStats_Plot:
         fig2, ax2 = plt.subplots()
         fig3, ax3 = plt.subplots()
         fig4, ax4 = plt.subplots()
-        ax4b = ax4.twinx()
         fig5, ax5 = plt.subplots()
         fig6, ax6 = plt.subplots()
         fig7, ax7 = plt.subplots()
@@ -291,11 +261,10 @@ class ConditionalStats_Plot:
         if vorticity_plot_opt == 'y':
             fig10, ax10 = plt.subplots()
             fig11, ax11 = plt.subplots()
-            #fig12, ax12 = plt.subplots()
+            fig12, ax12 = plt.subplots()
             fig13, ax13 = plt.subplots()
-            #fig14, ax14 = plt.subplots()
-            #fig15, ax15 = plt.subplots()
-            fig16, ax16 = plt.subplots()
+            fig14, ax14 = plt.subplots()
+            fig15, ax15 = plt.subplots()
         for key_ind in range(len(key_list)):
             key = key_list[key_ind]
             self.loc = loc
@@ -320,92 +289,140 @@ class ConditionalStats_Plot:
             vprime_cond = np.moveaxis(np.moveaxis(np.array(self.DP.layer_V),2,0)-mean_v_cond,0,2)
             shp_set = np.shape(self.DP.layer_U)
             uprime_rms = np.sqrt(np.mean(uprime_cond**2.0, axis=2))
-            edge_loc = (self.DP.layer_y[int(shp_set[0] / 2), :,:, int(shp_set[3] / 2)]-np.mean(self.jet_center))/np.mean(self.y_half)
-            """hist,bin_edge = np.histogram(edge_loc,bins=20,density=True)
-            pdf_x = (bin_edge[0:-1] + bin_edge[1:]) / 2.0
-            plt.plot(pdf_x,hist)"""
-            #plt.show()
+            self.data_extract(45,1)
             dx = self.X[1, 2] - self.X[1, 1]
             dy = dx
+            plt.subplots()
+            plt.imshow(np.mean(np.mean(self.DP.layer_U[:, 310:390,:, :], axis=2),axis=1))
+            #local coordinate frame projection of velcotiy vector to find component parallel and perpendicular to the local interface
+            U_transf,V_transf = self.velocity_transform_coords(self.DP.layer_U, self.DP.layer_V, self.DP.slope_cond)
+#            self.entrainment_calc(shp_set, V_transf)
+            #self.edge_fft(self.DP.layer_x[int(shp_set[0]/2),:,1:,int(shp_set[3]/2)],self.DP.layer_y[int(shp_set[0]/2),:,1:,int(shp_set[3]/2)])
 
             mrkr_size = 10
             for i in range(len(xloc)):
                 ind = xloc[i]
-                Uplot,Vplot,u_rms,v_rms,RSSplot,K_td_plot, K_t_plot, K_nu_plot, K_nu_t_plot, K_adv_plot, \
-                enstrophy_plot, vorticity_plot, vorticity_mod_plot, enstrophy_flux_plot = self.data_extract(ind, h_win, dx/2.0, dy/2.0)
-
-                #TKE_turb_transp1,TKE_turb_transp2,TKE_turb_transp3, TKE_dissip = KE.turbulentkineticenergy(uprime_cond, vprime_cond, dx, dy)
-                xloc_avg = np.where((self.X[0, :] <= ind+h_win)&(self.X[0, :] >= ind-h_win))[0]
+                start_ind = ind - h_win
+                stop_ind = ind + h_win
+                if start_ind <= min_ind:
+                    start_ind = ind
+                    stop_ind = 2 * h_win + ind
+                elif stop_ind > max_ind:
+                    start_ind = ind - 2 * h_win
+                    stop_ind = ind
+                else:
+                    pass
+                if vorticity_plot_opt == 'y':
+                    # K_td, K_t, K_nu, K_nu_t, K_adv,enstrophy,vorticity, vorticity_mod, enstrophy_flux = KE.ke_budget_terms(mean_u_cond, mean_v_cond, uprime_cond, vprime_cond, dx,
+                    #                                               dy,self.DP.layer_U,self.DP.layer_V,self.DP.layer_omega[:,:,:,0])
+                    if ke_calc=='y':
+                        K_td, K_t, K_nu, K_nu_t, K_adv, enstrophy, vorticity, vorticity_mod, enstrophy_flux, uprime, vprime = KE.ke_budget_terms_svg_input(
+                            dx, dy, U_transf[:, start_ind:stop_ind, :, :], V_transf[:, start_ind:stop_ind, :, :])
+                    # K_td, K_t, K_nu, K_nu_t, K_adv, omega, Omega_mean, Omeage_modulus_mean, enstrophy_flux
+                    uprime, vprime = KE.field_smooth_turb(U_transf[:, start_ind:stop_ind, :, :], V_transf[:, start_ind:stop_ind, :, :])
+                    TKE_turb_transp1,TKE_turb_transp2,TKE_turb_transp3, TKE_dissip = KE.turbulentkineticenergy(uprime_cond, vprime_cond, dx, dy)
+                Uplot = np.mean(np.mean(self.DP.layer_U[:, start_ind:stop_ind, :, int(shp_set[3]/2)],axis = 2), axis=1)
+                yval = np.mean(self.DP.yval2[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
+                xval = np.mean(self.DP.xval2[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
+                xval_arr = self.DP.xval2[int(shp_set[0]/2), start_ind:stop_ind, int(shp_set[3]/2)]
+                xloc_avg = [np.where(self.X[0, :] <= x_ind)[0][-1] for x_ind in xval_arr]
                 ucoflow = np.mean(np.mean(self.U[-2:-1,xloc_avg],axis=0),axis=0)
-                ind_center = int(np.floor(len(Uplot) / 2))
+                ind_center = int(np.floor(len(yval) / 2))
+                x_center = xval[ind_center]
+                y_center = yval[ind_center]
+                #avg_ind = np.where(self.X[1, :] >= x_center)[0][0]
+                #xplot_avg = np.mean(self.Y[:, avg_ind])  # ,axis=1)
                 Ucenter = np.max(np.mean(self.U[:,xloc_avg],axis=1))  # ,axis=1))
+                # X_plot = np.mean(self.DP.layer_y,axis=2)
+                # X_plot = np.mean(X_plot[:,start_ind:stop_ind],axis=1)/self.settings.nozzle_dia
+                Vplot = np.mean(np.mean(self.DP.layer_V[:, start_ind:stop_ind, :, int(shp_set[3]/2)],axis=2), axis=1)
+                RSSplot = np.mean(self.DP.uv_mean[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
+
                 fact_loc = np.sign(np.linspace(0, len(Uplot) - 1, len(Uplot)) - ind_center)
-                #yhalf = self.y_half[xloc_avg]
-                xplot = ((np.array(range(len(Uplot)))-(ind_center))*dx/2.0) / np.mean(self.y_half[xloc_avg])# (self.settings.nozzle_dia * 1000)
+                xplot = (fact_loc * np.sqrt(np.power(xval - x_center, 2.0) + np.power(yval - y_center, 2.0))) / (
+                        self.settings.nozzle_dia * 1000)
 
                 fact_loc_deriv = np.sign(np.linspace(0, len(Uplot[1:-1]) - 1, len(Uplot[1:-1])) - ind_center)
-                xplot_deriv = xplot#[1:-1]
+                xplot_deriv = (fact_loc_deriv * np.sqrt(np.power(xval[1:-1] - x_center, 2.0) + np.power(yval[1:-1] - y_center, 2.0))) / (
+                        self.settings.nozzle_dia * 1000)
 
+                uprime_plot = np.mean(uprime_rms[:, start_ind:stop_ind, int(shp_set[3]/2)], axis=1)
+                if vorticity_plot_opt == 'y':
+                    start_ind = 0
+                    stop_ind = -1
+                    if ke_calc=='y':
+                        K_td_plot = np.mean(K_td[:, start_ind:stop_ind], axis=1)
+                        K_t_plot = np.mean(K_t[:, start_ind:stop_ind], axis=1)
+                        K_nu_plot = np.mean(K_nu[:, start_ind:stop_ind], axis=1)
+                        K_nu_t_plot = np.mean(K_nu_t[:, start_ind:stop_ind], axis=1)
+                        K_adv_plot = np.mean(K_adv[:, start_ind:stop_ind], axis=1)
+
+                        enstrophy_plot = np.mean(enstrophy[:, start_ind:stop_ind], axis=1)
+                        vorticity_plot = np.mean(vorticity[:, start_ind:stop_ind], axis=1)
+                        #vorticity_mod_plot = np.mean(vorticity_mod[:, start_ind:stop_ind], axis=1)
+                        enstrophy_flux_plot = np.mean(enstrophy_flux[:, start_ind:stop_ind], axis=1)
+                    TKE_dissip_plot = np.mean(TKE_dissip[:, start_ind:stop_ind], axis=1)
+                    TKE_turb_transp1_plot = np.mean(TKE_turb_transp1[:, start_ind:stop_ind], axis=1)
+                    TKE_turb_transp2_plot = np.mean(TKE_turb_transp2[:, start_ind:stop_ind], axis=1)
+                    TKE_turb_transp3_plot = np.mean(TKE_turb_transp3[:, start_ind:stop_ind], axis=1)
                 denom_fact = (Ucenter - ucoflow)
                 denom_fact_ke = (Ucenter - ucoflow) ** 3.0#(Ucenter) ** 3.0#
 
                 ax.scatter(xplot, (Uplot-ucoflow)/denom_fact,
                            s=mrkr_size)  # np.linspace(0,len(Uplot)-1,len(Uplot))
                 ax.set_ylabel('U/U$_c$')
-                ax.set_xlabel('r/y$_{1/2}$')
+                ax.set_xlabel('r/D')
                 print('ucoflow=',ucoflow)
 
-                ax1.scatter(xplot, (Vplot) / denom_fact, s=mrkr_size)#-Vplot[int(len(Vplot)/2)]
-                ax1.set_ylabel('V/U$_c$')#'(V-Vb)/U$_c$')
-                ax1.set_xlabel('r/y$_{1/2}$')
+                ax1.scatter(xplot, (Vplot-Vplot[int(len(Vplot)/2)]) / denom_fact, s=mrkr_size)
+                ax1.set_ylabel('(V-Vb)/U$_c$')
+                ax1.set_xlabel('r/D')
 
                 ax2.scatter(xplot, RSSplot/(denom_fact**2.0), s=mrkr_size)
                 ax2.set_ylabel('u\'v\' (m/s)')
-                ax2.set_xlabel('r/y$_{1/2}$')
-
-                ax16.scatter(xplot, (u_rms**2.0+v_rms**2.0)/(denom_fact ** 2.0), s=mrkr_size)
-                ax16.set_ylabel('TKE (m$^2$/s$^2$)')
-                ax16.set_xlabel('r/y$_{1/2}$')
+                ax2.set_xlabel('r/D')
 
                 if vorticity_plot_opt == 'y':
                     ax3.scatter(xplot, np.add(np.power(Uplot, 2.0), np.power(Vplot, 2.0)) / (Ucenter ** 2.0))
                     ax3.set_ylabel('KE/Ke$_{center}$)')
-                    ax3.set_xlabel('r/y$_{1/2}$')
+                    ax3.set_xlabel('r/D')
 
-                    ax4.scatter(xplot, u_rms / denom_fact, s=mrkr_size)
+                    ax4.scatter(xplot, uprime_plot / denom_fact, s=mrkr_size)
                     ax4.set_ylabel('u\' (m2/s2)')
-                    ax4b.scatter(xplot, v_rms / denom_fact, s=mrkr_size,marker='*')
-                    ax4b.set_ylabel('v\' (m2/s2)')
-                    ax4.set_xlabel('r/y$_{1/2}$')
+                    ax4.set_xlabel('r/D')
 
                     if ke_calc=='y':
                         ax5.scatter(xplot_deriv, K_t_plot / denom_fact_ke, s=mrkr_size)
                         ax5.set_ylabel('KE turbulent transport')
-                        ax5.set_xlabel('r/y$_{1/2}$')
+                        ax5.set_xlabel('r/D')
 
                         ax6.scatter(xplot_deriv, K_td_plot / denom_fact_ke, s=mrkr_size)
                         ax6.set_ylabel('KE turbulent loss')
-                        ax6.set_xlabel('r/y$_{1/2}$')
+                        ax6.set_xlabel('r/D')
 
                         ax7.scatter(xplot_deriv, K_nu_plot / denom_fact_ke, s=mrkr_size)
                         ax7.set_ylabel('KE Viscous loss')
-                        ax7.set_xlabel('r/y$_{1/2}$')
+                        ax7.set_xlabel('r/D')
 
                         ax8.scatter(xplot_deriv, K_nu_t_plot / denom_fact_ke, s=mrkr_size)
                         ax8.set_ylabel('KE Viscous transport')
-                        ax8.set_xlabel('r/y$_{1/2}$')
+                        ax8.set_xlabel('r/D')
 
                         ax9.scatter(xplot_deriv, K_adv_plot / denom_fact_ke, s=mrkr_size)
                         ax9.set_ylabel('KE Advective transport')
-                        ax9.set_xlabel('r/y$_{1/2}$')
+                        ax9.set_xlabel('r/D')
 
+                        print((xplot_deriv))
+                        print((TKE_dissip_plot))
+                        print(len(vorticity_plot))
+                        print(len(enstrophy_flux_plot))
                         ax10.scatter(xplot, enstrophy_plot, s=mrkr_size)
                         ax10.set_ylabel('Enstrophy')
-                        ax10.set_xlabel('r/y$_{1/2}$')
+                        ax10.set_xlabel('r/D')
 
                         ax11.scatter(xplot, -vorticity_plot, s=mrkr_size)
                         ax11.set_ylabel('-Vorticity')
-                        ax11.set_xlabel('r/y$_{1/2}$')
+                        ax11.set_xlabel('r/D')
 
                         """ax12.scatter(xplot, vorticity_mod_plot, s=mrkr_size)
                         ax12.set_ylabel('Vorticity Modulus')
@@ -413,9 +430,9 @@ class ConditionalStats_Plot:
 
                         ax13.scatter(xplot, enstrophy_flux_plot, s=mrkr_size)
                         ax13.set_ylabel('Enstrophy Flux')
-                        ax13.set_xlabel('r/y$_{1/2}$')
+                        ax13.set_xlabel('r/D')
 
-                    """ax14.scatter(xplot_deriv, TKE_dissip_plot, s=mrkr_size)
+                    ax14.scatter(xplot_deriv, TKE_dissip_plot, s=mrkr_size)
                     ax14.set_ylabel('TKE dissipation')
                     ax14.set_xlabel('r/D')
 
@@ -423,7 +440,7 @@ class ConditionalStats_Plot:
                     #ax15.scatter(xplot_deriv, TKE_turb_transp2_plot, s=mrkr_size)
                     #ax15.scatter(xplot_deriv, TKE_turb_transp3_plot, s=mrkr_size)
                     ax15.set_ylabel('TKE turbulent transport')
-                    ax15.set_xlabel('r/D')"""
+                    ax15.set_xlabel('r/D')
 
                 """fig_budg,ax_budg = plt.subplots()
                 ax_budg.plot(xplot, K_t_plot / denom_fact_ke,linewidth=1.5, label="Turbulent transport" )
@@ -442,6 +459,197 @@ class ConditionalStats_Plot:
 
         ax.legend(otsu_list)#key_list)
         plt.show()
+
+
+
+
+    def extract_data_points_improved(self):
+        xloc = [10, 100, 400, 550]  # self.DP.X_pos
+        min_ind = 0
+        max_ind = len(self.DP.U[0, :]) - 1
+        h_win = 10  # +/- hwin
+        fig, ax = plt.subplots()
+        img = ax.imshow(np.mean(self.DP.layer_U, axis=2)[:,:,0])
+        fig.colorbar(img)
+        #plt.show()
+        fig, ax = plt.subplots()
+        fig1, ax1 = plt.subplots()
+        fig2, ax2 = plt.subplots()
+        fig3, ax3 = plt.subplots()
+        fig4, ax4 = plt.subplots()
+        fig5, ax5 = plt.subplots()
+        fig6, ax6 = plt.subplots()
+        fig7, ax7 = plt.subplots()
+        fig8, ax8 = plt.subplots()
+        fig9, ax9 = plt.subplots()
+        mean_u_cond = np.mean(self.DP.layer_U, axis=2)
+        mean_v_cond = np.mean(self.DP.layer_V, axis=2)
+        uprime_cond = self.DP.layer_U
+        vprime_cond = self.DP.layer_V
+        shp_set = np.shape(self.DP.layer_U)
+        for prime_ind in range(shp_set[2]):
+            uprime_cond[:,:,prime_ind,:] = np.subtract(self.DP.layer_U[:,:,prime_ind,:], mean_u_cond)
+            vprime_cond[:,:,prime_ind,:] = np.subtract(self.DP.layer_V[:,:,prime_ind,:], mean_v_cond)
+
+        uprime_rms = np.zeros(np.shape(uprime_cond))
+        for prime_ind in range(shp_set[2]):
+            uprime_rms[:,:,prime_ind,:] = np.add(uprime_rms[:,:,prime_ind,:],np.power(uprime_cond[:,:,prime_ind,:],2.0))
+        uprime_rms = np.sqrt(np.mean(uprime_rms,axis = 2))
+        dx = self.X[1, 2] -self.X[1, 1]
+        dy = dx
+        K_td, K_t, K_nu, K_nu_t, K_adv = KE.ke_budget_terms(mean_u_cond,mean_v_cond,uprime_cond,vprime_cond,dx,dy)
+        mrkr_size = 10
+        for i in range(len(xloc)):
+            ind = xloc[i]
+            start_ind = ind - h_win
+            stop_ind = ind + h_win
+            if start_ind <= min_ind:
+                start_ind = ind
+                stop_ind = 2 * h_win + ind
+            elif stop_ind > max_ind:
+                start_ind = ind - 2 * h_win
+                stop_ind = ind
+            else:
+                pass
+
+            Uplot = np.mean(self.DP.U[:, start_ind:stop_ind,0], axis=1)
+            yval = np.mean(self.DP.yval2[:, start_ind:stop_ind,0], axis=1)
+            xval = np.mean(self.DP.xval2[:, start_ind:stop_ind,0], axis=1)
+            ind_center = int(np.floor(len(yval) / 2))
+            x_center = xval[ind_center]
+            y_center = yval[ind_center]
+            avg_ind = np.where(self.X[1, :] >= x_center)[0][0]
+            xplot_avg = np.mean(self.Y[:, avg_ind])  # ,axis=1)
+            Ucenter = np.max((self.U[:, avg_ind]))  # ,axis=1))
+            # X_plot = np.mean(self.DP.layer_y,axis=2)
+            # X_plot = np.mean(X_plot[:,start_ind:stop_ind],axis=1)/self.settings.nozzle_dia
+            Vplot = np.mean(self.DP.V[:, start_ind:stop_ind,0], axis=1)
+            RSSplot = np.mean(self.DP.uv_mean[:, start_ind:stop_ind,0], axis=1)
+
+            fact_loc = np.sign(np.linspace(0, len(Uplot) - 1, len(Uplot)) - ind_center)
+            xplot = (fact_loc * np.sqrt(np.power(xval - x_center, 2.0) + np.power(yval - y_center, 2.0))) / (
+                        self.settings.nozzle_dia * 1000)
+
+            uprime_plot = np.mean(uprime_rms[:,start_ind:stop_ind,0],axis =1)
+            K_td, K_t, K_nu, K_nu_t, K_adv
+            K_td_plot = np.mean(K_td[:, start_ind:stop_ind],axis=1)
+            K_t_plot = np.mean(K_t[:, start_ind:stop_ind],axis=1)
+            K_nu_plot = np.mean(K_nu[:, start_ind:stop_ind],axis=1)
+            K_nu_t_plot = np.mean(K_nu_t[:, start_ind:stop_ind],axis=1)
+            K_adv_plot = np.mean(K_adv[:, start_ind:stop_ind],axis=1)
+            denom_fact = (Ucenter-self.u_coflow)
+            denom_fact_ke = (Ucenter-self.u_coflow)**3.0
+
+            ax.scatter(xplot, (Uplot - self.u_coflow) / denom_fact, s=mrkr_size)  # np.linspace(0,len(Uplot)-1,len(Uplot))
+            ax.set_ylabel('U/U$_c$ (m/s)')
+            ax.set_xlabel('r/D')
+
+            ax1.scatter(xplot, Vplot / denom_fact, s=mrkr_size)
+            ax1.set_ylabel('V (m/s)')
+            ax1.set_xlabel('r/D')
+
+            ax2.scatter(xplot, RSSplot, s=mrkr_size)
+            ax2.set_ylabel('u\'v\' (m/s)')
+            ax2.set_xlabel('r/D')
+
+            ax3.scatter(xplot, np.add(np.power(Uplot, 2.0), np.power(Vplot, 2.0)) / (Ucenter ** 2.0))
+            ax3.set_ylabel('KE (m2/s2)')
+            ax3.set_xlabel('r/D')
+
+            ax4.scatter(xplot, uprime_plot/denom_fact, s=mrkr_size)
+            ax4.set_ylabel('u\' (m2/s2)')
+            ax4.set_xlabel('r/D')
+
+            ax5.scatter(xplot, K_t_plot/denom_fact_ke, s=mrkr_size)
+            ax5.set_ylabel('KE turbulent transport')
+            ax5.set_xlabel('r/D')
+
+            ax6.scatter(xplot, K_td_plot/denom_fact_ke, s=mrkr_size)
+            ax6.set_ylabel('KE turbulent loss')
+            ax6.set_xlabel('r/D')
+
+            ax7.scatter(xplot, K_nu_plot/denom_fact_ke, s=mrkr_size)
+            ax7.set_ylabel('KE Viscous loss')
+            ax7.set_xlabel('r/D')
+
+            ax8.scatter(xplot, K_nu_t_plot/denom_fact_ke, s=mrkr_size)
+            ax8.set_ylabel('KE Viscous transport')
+            ax8.set_xlabel('r/D')
+
+            ax9.scatter(xplot, K_adv_plot/denom_fact_ke, s=mrkr_size)
+            ax9.set_ylabel('KE Advective transport')
+            ax9.set_xlabel('r/D')
+
+        ax.legend(xloc)
+        plt.show()
+
+    def extract_data_points(self):
+        xloc = [10,100,400,550]#self.DP.X_pos
+        min_ind=0
+        max_ind = len(self.DP.U[0,:])-1
+        h_win =5 #+/- hwin
+        fig, ax = plt.subplots()
+        img = ax.imshow(np.mean(self.DP.layer_U, axis=2))
+        fig.colorbar(img)
+        plt.show()
+        fig, ax = plt.subplots()
+        fig1, ax1 = plt.subplots()
+        fig2, ax2 = plt.subplots()
+        fig3, ax3 = plt.subplots()
+
+        for i in range(len(xloc)):
+            ind = xloc[i]
+            start_ind = ind-h_win
+            stop_ind = ind+h_win
+            if start_ind<=min_ind:
+                start_ind = ind
+                stop_ind = 2*h_win+ind
+            elif stop_ind>max_ind:
+                start_ind = ind-2*h_win
+                stop_ind = ind
+            else:
+                pass
+
+            Uplot = np.mean(self.DP.U[:,start_ind:stop_ind],axis=1)
+            yval = np.mean(self.DP.yval2[:, start_ind:stop_ind], axis=1)
+            xval = np.mean(self.DP.xval2[:, start_ind:stop_ind], axis=1)
+            ind_center = int(np.floor(len(yval) / 2))
+            x_center = xval[ind_center]
+            y_center = yval[ind_center]
+            avg_ind = np.where(self.X[1,:]>=x_center)[0][0]
+            xplot_avg = np.mean(self.Y[:,avg_ind])#,axis=1)
+            Ucenter = np.max(np.mean(self.U[:,avg_ind]))#,axis=1))
+            #X_plot = np.mean(self.DP.layer_y,axis=2)
+            #X_plot = np.mean(X_plot[:,start_ind:stop_ind],axis=1)/self.settings.nozzle_dia
+            Vplot = np.mean(self.DP.V[:, start_ind:stop_ind], axis=1)
+            RSSplot = np.mean(self.DP.uv_mean[:,start_ind:stop_ind],axis=1)
+
+            fact_loc = np.sign(np.linspace(0,len(Uplot)-1,len(Uplot))-ind_center)
+            xplot = (fact_loc*np.sqrt(np.power(xval-x_center,2.0)+np.power(yval-y_center,2.0)))/(self.settings.nozzle_dia*1000)
+
+            ax.scatter(xplot,Uplot/Ucenter)#np.linspace(0,len(Uplot)-1,len(Uplot))
+            ax.set_ylabel('U/U$_c$ (m/s)')
+            ax.set_xlabel('r/D')
+
+
+            ax1.scatter(xplot, Vplot/Ucenter)
+            ax1.set_ylabel('V (m/s)')
+            ax1.set_xlabel('r/D')
+
+
+            ax2.scatter(xplot, RSSplot)
+            ax2.set_ylabel('u\'v\' (m/s)')
+            ax2.set_xlabel('r/D')
+
+
+            ax3.scatter(xplot, np.add(np.power(Uplot,2.0),np.power(Vplot,2.0))/(Ucenter**2.0))
+            ax3.set_ylabel('KE (m2/s2)')
+            ax3.set_xlabel('r/D')
+
+        ax.legend(xloc)
+        plt.show()
+
+
 
     def main(self):
         #self.readfile()

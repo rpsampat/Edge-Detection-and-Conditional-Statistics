@@ -500,22 +500,12 @@ class InterfaceDetection:
         #omega_val = np.delete(omega_val,doublecross_side, 0)
         side_val = np.delete(side_val, doublecross_side, 0)
         slope_valid = np.delete(slope_valid, doublecross_side, 0)
-
-        """uderivx_val[off_side] = np.flip(uderivx_val[off_side], 1)
-        uderivy_val[off_side] = np.flip(uderivy_val[off_side], 1)
-        vderivx_val[off_side] = np.flip(vderivx_val[off_side], 1)
-        vderivy_val[off_side] = np.flip(vderivy_val[off_side], 1)"""
         # Final output, swap axis= 0 and 1
         shp_cast = (shp_val[0],shp_val[1],shp_val[2])
         self.layer_x = np.swapaxes(x_val_interp, 0,1)
         self.layer_y = np.swapaxes(y_val_interp, 0,1)
         self.layer_U = np.swapaxes(u_val, 0,1)
         self.layer_V = np.swapaxes(v_val, 0,1)
-        #self.layer_omega= np.swapaxes(omega_val, 0,1)
-        """self.layer_uderivx = np.swapaxes(uderivx_val, 0, 1)
-        self.layer_uderivy = np.swapaxes(uderivy_val, 0, 1)
-        self.layer_vderivx = np.swapaxes(vderivx_val, 0, 1)
-        self.layer_vderivy = np.swapaxes(vderivy_val, 0, 1)"""
         self.side_val = np.swapaxes(side_val, 0,1)
         self.slope_cond = slope_valid # slope of edge
         # Engulfment sites

@@ -63,7 +63,7 @@ class DataProcessor_Conditional:
         dx_temp = np.diff(AC.X, axis=1)
         self.dx = dx_temp[0, 0] / 1000  # in m
         dy_temp = np.diff(AC.Y, axis=0)
-        dy = dy_temp[0, 0] / 1000  # in m
+        #dy = dy_temp[0, 0] / 1000  # in m
         VD = VelocityData.VelocityData()
         num_imgs = settings.num_inst
         num_inst = np.sum(num_imgs)

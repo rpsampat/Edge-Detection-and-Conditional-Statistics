@@ -11,10 +11,10 @@ class Run:
     def __init__(self):
         self.drive = "P:/"
         self.folder = "JetinCoflow_V2/Exported/PIV_5000imgs/"
-        self.axial_location='10D'#5D,10D,15D,20D,30D,70D
+        self.axial_location='15D'#5D,10D,15D,20D,30D,70D
         self.rpm_coflow =['0','250','375','680']#0,250,375,680
         # should have number of inputs as number of folders for the given rpm and axial location
-        self.num_imgs=[[2000],[250,250],[250,250],[50,50,50]]
+        self.num_imgs=[[100,100],[100,100,100],[100,100,100],[100,100,100]]
         self.otsu_fact=[10,8,8,4]
         self.save_folder = "JetinCoflow_V2/Exported/PIV_5000imgs/Conditional_data/"
 
@@ -44,13 +44,17 @@ class Run:
 
     def process(self,rpm_coflow,axial_location,otsu_fact,num_inst):
         settings = Settings.Settings()
+        header = self.image_dir_list(axial_location, rpm_coflow)
+        diff_num = len(header)-len(num_inst)
+        for i in range(diff_num):
+            num_inst.append(0)
         settings.num_inst=num_inst
         DP = DataProcessingConditional.DataProcessor_Conditional()
-        header = self.image_dir_list(axial_location, rpm_coflow)
+
         DP.processor(settings, header,otsu_fact)
         DA = DataAccess.DataAccess()
         num_imgs = np.sum(settings.num_inst)
-        strng = "rpm" + rpm_coflow + "_kebasis_otsuby"+str(otsu_fact) + "_numimgs" + str(num_imgs)+"_normalisedminsubdetectioncriteria_2dx_101pts"#+"sgolay_win3"
+        strng = "rpm" + rpm_coflow + "_kebasis_otsuby"+str(otsu_fact) + "_numimgs" + str(num_imgs)+"_normalisedminsubdetectioncriteria_dx_101pts"#+"sgolay_win3"
         file_path2 = self.drive + self.save_folder + axial_location + '/' + strng + '.pkl'
         data = {'DP': DP, 'settings': settings}
         with open(file_path2, 'wb') as f:
@@ -61,7 +65,9 @@ class Run:
     def main(self):
         #for i in range(len(self.rpm_coflow)):
         i=0
-        self.process(self.rpm_coflow[i],self.axial_location,self.otsu_fact[i],self.num_imgs[i])
+        otsu_list = [10,4,1]
+        for otsu in otsu_list:
+            self.process(self.rpm_coflow[i],self.axial_location,otsu,self.num_imgs[i])
 
     def main_temp(self):
         settings = Settings.Settings()

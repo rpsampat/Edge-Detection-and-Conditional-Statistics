@@ -275,6 +275,7 @@ class Edge:
             plt.imshow(img_proc0)
             plt.title("Velocity Magnitude Image")  # ,extent = extent)
             plt.colorbar()
+            #plt.show()
 
         shp_img = np.shape(img_proc0)
         otsu_threshold, otsu_image_result = cv2.threshold(img_proc0, 0, 255, cv2.THRESH_TRUNC + cv2.THRESH_OTSU)

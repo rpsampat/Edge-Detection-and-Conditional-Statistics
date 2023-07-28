@@ -6,9 +6,9 @@ def matrix_build(x2, y2, uavg, vavg):
     x2uniq = np.unique(x2)
     y2uniq = np.unique(y2)
     S = np.zeros((len(y2uniq), len(x2uniq), 4))
-    counts_x = np.histogram(x2, bins=x2uniq)[0]
+    counts_x = np.histogram(x2, bins=len(x2uniq))[0]
     avg = np.mean(counts_x)
-    counts_y = np.histogram(y2, bins=y2uniq)[0]
+    counts_y = np.histogram(y2, bins=len(y2uniq))[0]
     avg_y = np.mean(counts_y)
     y_frequency_from_x = int(np.floor(avg))
     x_frequency_from_y = int(np.floor(avg_y))

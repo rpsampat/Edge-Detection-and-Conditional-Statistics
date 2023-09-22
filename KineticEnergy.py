@@ -118,12 +118,12 @@ def turbulence_2ndorder_2d(uprime, vprime):
     """u1u1 = (np.mean(u1u1,axis=-2))
     u1u2 = (np.mean(u1u2, axis=-2))
     u2u2 = (np.mean(u2u2, axis=-2))"""
-    u1u3 = 0.0*u1u2
+    u1u3 = 1.0*u1u2
     u2u1 = u1u2
-    u2u3 = 0.0*u1u2
+    u2u3 = 1.0*u1u2
     u3u1 = u1u2
-    u3u2 = 0.0*u1u2
-    u3u3 = 0.0*u2u2
+    u3u2 = 1.0*u1u2
+    u3u3 = 1.0*u2u2
 
     return u1u1, u1u2, u1u3, u2u1, u2u2, u2u3, u3u1, u3u2, u3u3
 
@@ -276,13 +276,18 @@ def derivative_2d_data(Z,dx,dy):
     #try:
     win = 5
     order = 2
-    dZdy, dZdx = sgolay2d(np.mean(Z,axis=1), win, order, derivative='both')
+    """dZdy, dZdx = sgolay2d(np.mean(Z,axis=1), win, order, derivative='both')
     d2Zdxdy, d2Zdx2 = sgolay2d(dZdx, win, order, derivative='both')
-    d2Zdy2, d2Zdxdy = sgolay2d(dZdy, win, order, derivative='both')
-    d2Zdz2 = np.zeros_like(d2Zdy2)
-    dZdz = np.zeros_like(dZdy)
-    d2Zdxdz = np.zeros_like(d2Zdxdy)
-    d2Zdydz = np.zeros_like(d2Zdxdy)
+    d2Zdy2, d2Zdxdy = sgolay2d(dZdy, win, order, derivative='both')"""
+
+    dZdx, dZdy = sgolay2d(np.mean(Z, axis=1), win, order, derivative='both')
+    d2Zdx2, d2Zdxdy = sgolay2d(dZdx, win, order, derivative='both')
+    d2Zdxdy, d2Zdy2 = sgolay2d(dZdy, win, order, derivative='both')
+
+    d2Zdz2 = d2Zdy2#np.zeros_like(d2Zdy2)
+    dZdz = dZdy#np.zeros_like(dZdy)
+    d2Zdxdz = d2Zdxdy#np.zeros_like(d2Zdxdy)
+    d2Zdydz = d2Zdxdy#np.zeros_like(d2Zdxdy)
     shp_arr1 = np.shape(d2Zdxdy)  # 5
     shp_arr2 = np.shape(d2Zdy2)  # 7
 
@@ -330,10 +335,20 @@ def domain_sgolayy(ynum,Z):
     win = 5
     order = 2
     arr=Z[:,ynum,:]
-    Z_out = sgolay2d(arr, win, order, derivative=None)
-    dZdy, dZdx = sgolay2d(arr, win, order, derivative='both')
+    Z_out = sgolay2d(np.array(arr), win, order, derivative=None)
+    dZdx, dZdy = sgolay2d(np.array(arr), win, order, derivative='both')
+    """fig,ax = plt.subplots()
+    ax.imshow(arr)
+    fig.title("Original")
+    fig2, ax2 = plt.subplots()
+    ax2.imshow(Z_out)
+    fig3, ax3 = plt.subplots()
+    ax3.imshow(dZdx)
+    fig4, ax4 = plt.subplots()
+    ax4.imshow(dZdy)
+    plt.show()"""
 
-    return Z_out,dZdx,dZdy
+    return Z_out,dZdx,-dZdy
 
 def domain_sgolayx(img_num,Z,ynum):
 
@@ -394,6 +409,8 @@ def field_smooth_turb(U_inst, V_inst):
 def ke_budget_terms_svg_input(dx, dy, U_inst, V_inst):#,uderivx,uderivy,vderivx,vderivy):
     U_inst_smooth,dU_instdx,dU_instdy= savitzkygolay_local(U_inst)
     V_inst_smooth,dV_instdx,dV_instdy = savitzkygolay_local(V_inst)
+    #U_inst_smooth = U_inst
+    #V_inst_smooth = V_inst
     U = np.mean(U_inst_smooth,axis=1)
     V = np.mean(V_inst_smooth,axis=1)
     #mean_inst_U = np.mean(U_inst[:,100,:,:],axis=1)
@@ -437,7 +454,7 @@ def ke_budget_terms_svg_input(dx, dy, U_inst, V_inst):#,uderivx,uderivy,vderivx,
     du2u1dx = du1u2dx
     du3u1dx = du1u3dx
     du3u2dy = du2u3dy
-    du3u3dz = 0.0 * du2u2dy
+    du3u3dz = 1.0 * du2u2dy
 
     U1 = U[:, int(shp_arr[-1]/2)]
     U2 = V[:, int(shp_arr[-1]/2)]
@@ -481,11 +498,11 @@ def ke_budget_terms_svg_input(dx, dy, U_inst, V_inst):#,uderivx,uderivy,vderivx,
     #dUdx, dUdy, dUdz, d2Udx2, d2Udy2, d2Udz2, d2Udxdy, d2Udxdz, d2Udydz = derivatives_inst(U_inst, dx, dy)
     #dVdx, dVdy, dVdz, d2Vdx2, d2Vdy2, d2Vdz2, d2Vdxdy, d2Vdxdz, d2Vdydz = derivatives_inst(V_inst, dx, dy)
     Omega_mean = np.mean(dV_instdx[:,:,int(shp_arr[-1]/2)]-dU_instdy[:,:,int(shp_arr[-1]/2)], axis=1)#np.mean((omega_inst), axis=2)
-    Omeage_modulus_mean = 0#np.mean(np.abs(dVdx - dUdy), axis=2)
+    Omeage_modulus_mean = np.mean(np.abs(dV_instdx[:,:,int(shp_arr[-1]/2)]-dU_instdy[:,:,int(shp_arr[-1]/2)]), axis=1)
     # Subtraction by Broadcasting. Taking transpose becomes essential to subtract a mean matrix from a 3D dataset.
     omega = (dV_instdx[:,:,:]-dU_instdy[:,:,:])#omega_inst)  # (dVdx-dUdy)
     Omega_subt = (Omega_mean)
-    enstrophy = np.moveaxis(np.moveaxis(omega**2.0,0,2) - Omega_subt** 2.0,2,0)
+    enstrophy = np.moveaxis((np.moveaxis(omega,0,2) - Omega_subt)** 2.0,2,0)
     omega = np.mean(enstrophy[:,:,int(shp_arr[-1]/2)], axis=1)
     enstrophy_flux_3d = (enstrophy) * (vprime[:,:, :])
     #enstrophy_flux, denstrophy_fluxdx, denstrophy_fluxdy = savitzkygolay_local(enstrophy_flux_3d)

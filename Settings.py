@@ -15,11 +15,11 @@ class Settings:
         self.shear_calc = 'y'  # y/n
         self.LEA = 'y'  # y/n
         self.layer = "up"  # low/up
-        self.shear_num = 201  # number of points in shear layer
+        self.shear_num = 99  # number of points in shear layer
         self.m_x_loc = 6  # number of x locations to check within each image
         self.n_y_loc = 10  # number of y locations to check within each image
         self.x_img = 10  # mm
-        self.x_abs = 154.5 # mm
+        self.x_abs = 226.0 # mm
         self.nozzle_start = (self.x_img - self.x_abs)  # nozzle start point in image, in mm
         self.pos_rad = 15  # radial point 'number' at which 2 point statistics are determined
         self.radial_plot = 'y'  # radial plots of scales y/n

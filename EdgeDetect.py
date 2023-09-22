@@ -269,11 +269,11 @@ class Edge:
         if plot_img=='y':
             plt.subplots()
             plt.imshow(vel_mag)
-            plt.title("Velocity Magnitude (m/s)")  # ,extent = extent)
+            plt.title("Detection Quantity")  # ,extent = extent)
             plt.colorbar()
             plt.subplots()
             plt.imshow(img_proc0)
-            plt.title("Velocity Magnitude Image")  # ,extent = extent)
+            plt.title("Detection Quantity Image")  # ,extent = extent)
             plt.colorbar()
             #plt.show()
 
@@ -281,13 +281,15 @@ class Edge:
         otsu_threshold, otsu_image_result = cv2.threshold(img_proc0, 0, 255, cv2.THRESH_TRUNC + cv2.THRESH_OTSU)
         print("Cluster Otsu=", otsu_threshold)
         # thresholding important in this step as otherwise clusters not detected
-        img_cluster_mask = self.dbscan(img_proc0, red_level=0, dbscan_thresh=otsu_threshold/otsu_fact, epsilon=3, minpts=20,plot_img=plot_img)
+        fact_red = otsu_threshold/otsu_fact#np.max(vel_mag)/10.0#
+        img_cluster_mask = self.dbscan(img_proc0, red_level=0, dbscan_thresh=fact_red, epsilon=3, minpts=20,plot_img=plot_img)
         img_proc1 = img_cluster_mask  # img_proc0*img_cluster_mask
         if plot_img=='y':
             plt.subplots()
             plt.imshow(img_proc1)
             plt.title("Velocity Clusters(largest)")  # ,extent = extent)
             plt.colorbar()
+            #plt.show()
         img_cluster_mask2 = self.dbscan(img_proc1, red_level=0, dbscan_thresh=125, epsilon=3, minpts=20,plot_img=plot_img)
         img_proc2 = img_cluster_mask2
         if plot_img == 'y':
@@ -295,6 +297,7 @@ class Edge:
             plt.imshow(img_proc2)
             plt.title("Cluster of Cluster(largest)")  # ,extent = extent)
             plt.colorbar()
+            #plt.show()
         # plt.subplots()
         img_proc3 = self.arr2img(img_proc2)
         cnt_max, contours, edges, img_blur = self.edge_extract(img_proc3, kernel_blur=1,plot_img=plot_img)
@@ -316,7 +319,7 @@ class Edge:
 
         return arr_scale
 
-    def data_detect(self,u,v,xx,yy, U, V,otsu_fact):
+    def data_detect(self,u,v,xx,yy, U, V,otsu_fact,vort_fact):
         """
         velocity data already provided
         :param u:
@@ -326,9 +329,22 @@ class Edge:
         #vel_mag = (np.add(np.power(u-U, 2.0), np.power(v-V, 2.0)))
         max_vel = np.max(u,axis=0)
         criteria = np.add(np.power(u, 2.0), np.power(v, 2.0))
-        min_ke = np.min(criteria, axis=0)
-        max_ke = np.max(criteria, axis=0)
-        vel_mag = (criteria-min_ke)/(max_ke)
+        win = 5
+        order = 2
+        dvdx, dvdy = sgolay2d(v, win, order, derivative='both')
+        dudx, dudy = sgolay2d(u, win, order, derivative='both')
+        #dUdx, dUdy = sgolay2d(U, win, order, derivative='both')
+        """plt.subplots()
+        plt.imshow(dUdx)
+        plt.subplots()
+        plt.imshow(U)
+        plt.show()"""
+        vorticity = dvdx-dudy#(np.diff(v-V,axis=1)[0:-1,:]-np.diff(u-U,axis=0)[:,0:-1])
+        win_convolve = np.ones(1)/1.0
+        min_ke = np.min(criteria, axis=0)#np.convolve(win_convolve,np.min(criteria, axis=0),mode='same')
+        max_ke = np.max(criteria, axis=0)#np.convolve(win_convolve,np.max(criteria, axis=0),mode='same')
+        vel_mag =((criteria-min_ke)/(max_ke-min_ke))*np.abs(vorticity*vort_fact)#
+        #vel_mag =np.max(vel_mag)-vel_mag
 
         #vel_mag = np.subtract(vel_mag,np.min(vel_mag))
         x_edge, y_edge, img_proc0, contours, cluster_img = self.detect(vel_mag, plot_img='n',otsu_fact=otsu_fact)
@@ -340,7 +356,7 @@ class Edge:
         x_edge_scale = np.array(x_edge * dx + x0)
         y_edge_scale = np.array(y_edge * dy + y0)
 
-        return x_edge_scale, y_edge_scale, img_proc0,dx,dy,x0,y0,contours,cluster_img
+        return x_edge_scale, y_edge_scale, img_proc0,dx,dy,x0,y0,contours,cluster_img,vorticity
 
 
     def main_detect(self):

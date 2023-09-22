@@ -27,5 +27,5 @@ class DataAccess:
         else:
             txt = str(inst)
         txtfile_temp = f'{pre_head}B0{txt}.dat'
-        txtfile = np.loadtxt(txtfile_temp, skiprows=3)
+        txtfile = np.loadtxt(txtfile_temp, skiprows=3,max_rows=153720)#153725)#
         return txtfile

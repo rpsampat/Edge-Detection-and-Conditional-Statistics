@@ -20,7 +20,7 @@ class InterfaceDetection:
         self.otsu_fact = otsu_fact
 
 
-    def Detect(self, u, v, x, y, layer,U,V,win_cond):
+    def Detect(self, u, v, x, y, layer,U,V,win_cond,vort_fact):
         """
 
         :param u: instantaneous velocity along x axis(2D array)
@@ -43,7 +43,7 @@ class InterfaceDetection:
         #omega = v_derivx-u_derivy
         #u = u_sg
         #v= v_sg
-        X_I, Y_I, img_proc0,dx,dy,x0,y0, contours, cluster_img = edge.data_detect(u,v,x,y,U,V,self.otsu_fact)
+        X_I, Y_I, img_proc0,dx,dy,x0,y0, contours, cluster_img,vorticity = edge.data_detect(u,v,x,y,U,V,self.otsu_fact,vort_fact)
         print("Y_I shape=",np.shape(Y_I))
         m,X_out,Y_out,grad2 = self.edge_slope((X_I-x0)/dx,(Y_I-y0)/dy,contours,dx,dy,x0,y0)
         # Todo: Extract gradient after smoothing velocity field
@@ -84,7 +84,7 @@ class InterfaceDetection:
         dx_cond = dx*1.0
         dy_cond = dy*1.0
         #self.ShearLayer(X_out, Y_out,m,grad2,x, y, u, v,dx_cond,dy_cond,x0,y0,cluster_img,omega,u_derivy,u_derivx,v_derivy, v_derivx, win_cond)
-        self.ShearLayer(X_out, Y_out, m, grad2, x, y, u, v, dx_cond, dy_cond, x0, y0, cluster_img, win_cond)
+        self.ShearLayer(X_out, Y_out, m, grad2, x, y, u, v, dx_cond, dy_cond, x0, y0, cluster_img, vorticity,win_cond)
         print('Max u=',np.max(u))
         """quant = (Y_out - Y_out[0])#np.sqrt((Y_out - Y_out[0])**2+(X_out-X_out[0])**2.0)
         yf = np.abs(fftshift(fft(quant)))/len(X_out)
@@ -422,7 +422,7 @@ class InterfaceDetection:
 
         return x2, y2
 
-    def ShearLayer(self, X_I, Y_I,m,grad2,x, y, u, v,dx,dy,x0,y0,cluster_img, win_cond):
+    def ShearLayer(self, X_I, Y_I,m,grad2,x, y, u, v,dx,dy,x0,y0,cluster_img, vorticity, win_cond):
         edge_length = len(Y_I) #len(x[0,:])
         self.skipped_lines_sub = []
 
@@ -461,6 +461,7 @@ class InterfaceDetection:
         u_val = self.interpolate_array(points, u, interp_pts, shp_cast)
         v_val = self.interpolate_array(points, v, interp_pts, shp_cast)
         side_val = self.interpolate_array(points, cluster_img, interp_pts, shp_cast)
+        omega_val = self.interpolate_array(points, vorticity, interp_pts, shp_cast)
         # Assigning value to point based on which side of the interface it lies on. This is based on the value assigned
         # to the cluster. Value assigned is+/-10 to increase the range to be able to identify points crrectly despite
         # looking at interpolated values od side_val.
@@ -468,10 +469,9 @@ class InterfaceDetection:
         neg_loc = np.where(side_val<0)
         side_val[pos_loc]=10
         side_val[neg_loc]=-10
-        x_val_interp = np.reshape(x_val_interp, shp_cast)
-        y_val_interp = np.reshape(y_val_interp, shp_cast)
-        print("Ylayer length=",len(Y_I))
-        print("layer shape=",np.shape(x_val_interp))
+        #x_val_interp = np.reshape(x_val_interp, shp_cast)
+        #y_val_interp = np.reshape(y_val_interp, shp_cast)
+
         # Inversion based on which side of the curve the starting point lies on
         side_arr = np.array(side_val[:, :, int(win_cond/2)])
         # checking the first and last four values of the extracted line for orientation
@@ -480,10 +480,11 @@ class InterfaceDetection:
         y_val_interp[off_side] = np.flip(y_val_interp[off_side], 1)
         u_val[off_side] = np.flip(u_val[off_side], 1)
         v_val[off_side] = np.flip(v_val[off_side], 1)
+        omega_val[off_side] = np.flip(omega_val[off_side], 1)
         #omega_val[off_side] = np.flip(omega_val[off_side], 1)
         # delete lines that cross interface twice
         grad_cross = np.abs(np.diff(side_arr,axis=1))
-        high_cross_val,high_cross_counts = np.unique(np.where(grad_cross>4)[0],return_counts=True)
+        high_cross_val,high_cross_counts = np.unique(np.where(grad_cross>18)[0],return_counts=True)
         doublecross_side = high_cross_val[np.where(high_cross_counts>1)[0]]#np.abs(side_arr[:, 0] - side_arr[:, self.shear_num - 1]) < 0.5)[0]
         # engulfment sites
         x_val_interp_engulf = x_val_interp[doublecross_side]
@@ -497,17 +498,23 @@ class InterfaceDetection:
         y_val_interp = np.delete(y_val_interp,doublecross_side, 0)
         u_val = np.delete(u_val,doublecross_side, 0)
         v_val = np.delete(v_val,doublecross_side, 0)
+        omega_val = np.delete(omega_val, doublecross_side, 0)
         #omega_val = np.delete(omega_val,doublecross_side, 0)
         side_val = np.delete(side_val, doublecross_side, 0)
         slope_valid = np.delete(slope_valid, doublecross_side, 0)
+        print("Ylayer length=", len(Y_I))
+        print("layer shape=", np.shape(x_val_interp))
+        print("layer engulf shape=", np.shape(x_val_interp_engulf))
         # Final output, swap axis= 0 and 1
         shp_cast = (shp_val[0],shp_val[1],shp_val[2])
         self.layer_x = np.swapaxes(x_val_interp, 0,1)
         self.layer_y = np.swapaxes(y_val_interp, 0,1)
         self.layer_U = np.swapaxes(u_val, 0,1)
         self.layer_V = np.swapaxes(v_val, 0,1)
+        self.layer_omega = np.swapaxes(omega_val, 0, 1)
         self.side_val = np.swapaxes(side_val, 0,1)
         self.slope_cond = slope_valid # slope of edge
+        self.len_edge = len(Y_I)
         # Engulfment sites
         self.layer_x_engulf = np.swapaxes(x_val_interp_engulf, 0, 1)
         self.layer_y_engulf = np.swapaxes(y_val_interp_engulf, 0, 1)

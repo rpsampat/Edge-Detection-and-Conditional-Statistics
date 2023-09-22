@@ -1,5 +1,5 @@
 import Settings
-import DataProcessingConditional
+import DataProcessing
 import numpy as np
 import scipy.io as sio
 import DataAccess
@@ -13,8 +13,8 @@ class Run:
         self.drive = "O:/"
         self.folder = "JetinCoflow_V2/Exported/PIV_5000imgs/"#"Confined Jet/HeatedFlow_P60_phi080_fstop11_dt6.5_f1v1SeqPIV_MPd(3x24x24_75ov_ImgCorr)=unknown/"#"JetinCoflow_V2/Exported/PIV_5000imgs/"
         self.axial_location='15D'#5D,10D,15D,20D,30D,70D
-        self.start_loc_dict={'5D':-3.5,'10D':1.0,'15D':10.0,'20D':10.0,'30D':-5.75}#-15.75#10#15
-        self.end_loc_dict = {'5D': 61.5, '10D': 49.0, '15D': 30.0, '20D':30.0 , '30D': 61.5}#112.5#40#30
+        self.start_loc_dict={'5D':-3.5,'10D':1.0,'15D':10.0,'20D':-5.75,'30D':-5.75}#-15.75#10#15#10
+        self.end_loc_dict = {'5D': 61.5, '10D': 49.0, '15D': 30.0, '20D':61.5 , '30D': 61.5}#112.5#40#30#30
         self.xdist_dict = {'5D': -4.223, '10D': 10.0, '15D': 10.0, '20D': 10.0, '30D': 10.0}
         self.xdist_abs_dict = {'5D': 0.0, '10D': 85.5, '15D': 154.5, '20D': 226, '30D': 327.5}
         self.rpm_coflow =['0','250','375','680']#0,250,375,680
@@ -58,7 +58,7 @@ class Run:
         for i in range(diff_num):
             num_inst.append(0)
         settings.num_inst=num_inst
-        DP = DataProcessingConditional.DataProcessor_Conditional()
+        DP = DataProcessing.DataProcessor()
 
         DP.processor(settings, header,otsu_fact)
         DA = DataAccess.DataAccess()
@@ -66,7 +66,7 @@ class Run:
         #_kebasis_rescaledcoflow
         #_vorticitymagnitude
         #_vorticitymagnitudegradcorrect
-        strng = "rpm" + rpm_coflow + "_vorticitymagnitudegradcorrect2_otsuby"+str(otsu_fact) + "_numimgs" + str(num_imgs)+"_normalisedminsubdetectioncriteria_dx_99pts_win5"#+"sgolay_win3"
+        strng = "rpm" + rpm_coflow + "mean_numimgs" + str(num_imgs)
         file_path2 = self.drive + self.save_folder + axial_location + '/' + strng + '.pkl'
         data = {'DP': DP, 'settings': settings}
         with open(file_path2, 'wb') as f:
@@ -87,7 +87,7 @@ class Run:
         settings.start_loc = -8.0#-15.8
         settings.end_loc = 119.0#112.5
         num_imgs = 40
-        otsu_fact=20
+        otsu_fact=2
         settings.num_inst = [num_imgs]
         DP = DataProcessingConditional.DataProcessor_Conditional()
         header = np.array(["O:/Confined Jet/HeatedFlow_P60_phi080_fstop11_dt6.5_f1v1SeqPIV_MPd(3x24x24_75ov_ImgCorr)=unknown/"])
@@ -100,7 +100,7 @@ class Run:
         #KE = KE_budget.KE_budget();
         #KE.budget(DP.U, DP.V, DP.dx, DP.dx, DP.u_rms, DP.v_rms, DP.uv_mean,settings.nu, DP.yval2, DP.xval2, DP.tke_proc, DP.tke)
         loc = DA.header_def(header[0])
-        strng = "heatedflow_vorticityke_product_ostu"+str(otsu_fact)+ "_numimgs" + str(num_imgs)+"_normalisedminsubdetectioncriteria_dx_99pts_win3"#otsuby1_velmagsqrt_shearlayeranglemodify_overlayangleadjust
+        strng = "heatedflow_vorticity_ostu"+str(otsu_fact)+ "_numimgs" + str(num_imgs)+"_normalisedminsubdetectioncriteria_dx_99pts_win3"#otsuby1_velmagsqrt_shearlayeranglemodify_overlayangleadjust
 
 
         # Assuming `loc` is the directory and `strng` is the file name
@@ -116,5 +116,5 @@ class Run:
 
 if __name__ == '__main__':
     run =Run()
-    run.main_temp()
-    #run.main()
+    #run.main_temp()
+    run.main()

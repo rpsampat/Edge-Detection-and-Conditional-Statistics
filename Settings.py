@@ -1,11 +1,11 @@
 class Settings:
     def __init__(self):
-        self.num_inst_avg = [5000]  #[2,2] number of images used for averaging
+        self.num_inst_avg = [500]  #[2,2] number of images used for averaging
         self.calc_avg = 'y'  # calculate avg y/n
         self.calc_avg_2 = 'n'
         self.twopointcorr = 'n'  # y/n
         self.nozzle_dia = 0.011  # air nozzle diameter, in m
-        self.start_loc = -5.75  # Image cutoff limits along x axis, in mm
+        self.start_loc = -8.5#-5.75  # Image cutoff limits along x axis, in mm
         self.end_loc = 61.5  # Image cutoff limits along x axis, in mm
         self.print_mean = 'y'  # y/n
         self.num_inst = [500]  # number of images used for statistics calculation
@@ -15,7 +15,7 @@ class Settings:
         self.shear_calc = 'y'  # y/n
         self.LEA = 'y'  # y/n
         self.layer = "up"  # low/up
-        self.shear_num = 99  # number of points in shear layer
+        self.shear_num = 59  # number of points in shear layer
         self.m_x_loc = 6  # number of x locations to check within each image
         self.n_y_loc = 10  # number of y locations to check within each image
         self.x_img = 10  # mm
@@ -26,3 +26,9 @@ class Settings:
         self.axial_plot = 'y'  # axial plots of scales y/n
         self.dir_stats = 'x'  # dominant direction for 2 point stats calculation: x/y
         self.nu = 1.5e-5
+        self.xdist_dict = {'5D': -4.223, '10D': 10.0, '15D': 10.0, '20D': 10.0, '30D': 10.0}
+        self.xdist_abs_dict = {'5D': 0.0, '10D': 85.5, '15D': 154.5, '20D': 226, '30D': 308.5}
+        self.frame_startx = {'5D':-3.5, '10D': 1.0, '15D': -5.75, '20D': -5.75, '30D': -4.5}
+        self.current_axial_loc='30D'
+        self.tick_size = 14
+        self.label_size = 16

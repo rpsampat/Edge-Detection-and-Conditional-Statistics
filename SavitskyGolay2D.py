@@ -83,3 +83,8 @@ def sgolay2d ( z, window_size, order, derivative=None):
         c = inv_mat[1].reshape((window_size, -1))
         r = inv_mat[2].reshape((window_size, -1))
         return scipy.signal.fftconvolve(Z, -r, mode='valid'), scipy.signal.fftconvolve(Z, -c, mode='valid')
+    elif derivative =="both_2nd":
+        inv_mat = np.linalg.pinv(A)
+        c = inv_mat[3].reshape((window_size, -1))
+        r = inv_mat[4].reshape((window_size, -1))
+        return scipy.signal.fftconvolve(Z, r, mode='valid'), scipy.signal.fftconvolve(Z, c, mode='valid')

@@ -20,7 +20,7 @@ class InterfaceDetection:
         self.otsu_fact = otsu_fact
 
 
-    def Detect(self, u, v, x, y, layer,U,V,win_cond,vort_fact):
+    def Detect(self, u, v, x, y, layer,U,V,win_cond,vort_fact, save_img,save_path, img_count):
         """
 
         :param u: instantaneous velocity along x axis(2D array)
@@ -43,9 +43,14 @@ class InterfaceDetection:
         #omega = v_derivx-u_derivy
         #u = u_sg
         #v= v_sg
-        X_I, Y_I, img_proc0,dx,dy,x0,y0, contours, cluster_img,vorticity = edge.data_detect(u,v,x,y,U,V,self.otsu_fact,vort_fact)
+        X_I, Y_I, img_proc0,dx,dy,x0,y0, contours, cluster_img,vorticity = edge.data_detect(u,v,x,y,U,V,self.otsu_fact,vort_fact,img_count,save_img,save_path)
         print("Y_I shape=",np.shape(Y_I))
-        m,X_out,Y_out,grad2 = self.edge_slope((X_I-x0)/dx,(Y_I-y0)/dy,contours,dx,dy,x0,y0)
+        m_0,X_out_0,Y_out_0,grad2_0 = self.edge_slope((X_I-x0)/dx,(Y_I-y0)/dy,contours,dx,dy,x0,y0)
+        cropped_loc= range(len(m_0))#np.where((X_out_0>20.0) & (X_out_0<25.0))[0]
+        m = m_0[cropped_loc]
+        X_out = X_out_0[cropped_loc]
+        Y_out = Y_out_0[cropped_loc]
+        grad2 = grad2_0[cropped_loc]
         # Todo: Extract gradient after smoothing velocity field
         """dvdx = np.diff(v, axis=1)
         dvdx = np.insert(dvdx, 0, dvdx[:, -1], axis=1)
@@ -63,21 +68,63 @@ class InterfaceDetection:
             yval = Y_I[np.where(X_I==x_unq[i])[0]]
             y_unq = np.append(y_unq,max(yval))"""
 
-        if plot_img=='y':
-            plt.subplots()
-            img1=plt.imshow(img_proc0,cmap='jet')
+        if plot_img=='y' or save_img=='y':
+            settings = Settings.Settings()
+            xdist_frame_start = (settings.xdist_abs_dict[settings.current_axial_loc] - settings.xdist_dict[settings.current_axial_loc])
+            fig,ax = plt.subplots()
+            #Edge =EdgeDetect.Edge()
+            #Edge.arr2img(img_proc0)
+            img1=ax.imshow(img_proc0,cmap='Reds')
+            xaxis_val = x[0,:]
+            tickx0 = np.round((xdist_frame_start+np.linspace(xaxis_val[0],xaxis_val[-1],len(ax.get_xticks()))
+                               -settings.frame_startx[settings.current_axial_loc])/(settings.nozzle_dia*1000),decimals=2)
+            yaxis_val = y[:, 0]
+            zero_loc = np.where(U[:, 0] == np.max(U[:, 0]))[0][0]
+            shp = np.shape(U)
+            y_spacing = (zero_loc - 0.0) / 3.0  # (shp[0]-0.0)/len(ax.get_yticks())
+            ticky00 = np.arange(0, zero_loc, y_spacing)
+            ticky01 = np.arange(zero_loc, shp[0], y_spacing)
+            ticky0 = (np.concatenate((ticky00, ticky01)))
+            ticky0 = np.round((ticky0-zero_loc)*abs(yaxis_val[1]-yaxis_val[0])/(settings.nozzle_dia*1000),decimals=2)
+            ax.set_xticks(ticks = ax.get_xticks()[1:-1:3],labels = tickx0[1:-1:3])
+            ax.set_yticklabels(ticky0)
+            ax.set_ylabel("Y/D",fontsize= settings.label_size)
+            ax.set_xlabel("X/D",fontsize= settings.label_size)
             #plt.scatter((x_unq-x0)/dx,(y_unq-y0)/dy,c='r',s=15)
             #plt.scatter((X_I-x0)/dx,(Y_I-y0)/dy, c='k',s=5)
-            plt.scatter((X_out - x0) / dx, (Y_out - y0) / dy, c='k', s=5)
-            plt.title("Detection value")
-            plt.colorbar(img1)
+            ax.scatter((X_out - x0) / dx, (Y_out - y0) / dy, c='k', s=1)
+            ax.tick_params(axis='both', labelsize=settings.tick_size)
+            ax.invert_yaxis()
+            #plt.title("Detection value")
+            cbar =fig.colorbar(img1)
+            cbar.set_label("|$\Omega$|y$_{1/2}$/U$_c$",rotation=270,labelpad=20,fontsize= settings.label_size)
+            cbar.set_ticklabels(np.round(cbar.get_ticks(), decimals=1),fontsize= settings.label_size)
+            if save_img=='y':
+                fig.savefig(save_path + 'Detection_val'+'_' + str(img_count)+ '.png', bbox_inches='tight',dpi=600)
 
-            plt.subplots()
-            img2 = plt.imshow(u,cmap='jet')
-            plt.scatter((X_out - x0) / dx, (Y_out - y0) / dy, c='k', s=5)
-            plt.quiver((x[::5,::5]-x0)/dx,(y[::5,::5]-y0)/dy,u[::5,::5],v[::5,::5],angles='xy', scale_units='xy', scale=1)
-            plt.title("U(m/s)")
-            plt.colorbar(img2)
+            fig,ax = plt.subplots()
+            img2 = ax.imshow(u,cmap='coolwarm')
+            ax.scatter((X_out - x0) / dx, (Y_out - y0) / dy, c='k', s=1)
+            mag = np.sqrt(u**2+v**2)
+            u_norm = u/mag
+            v_norm = v/mag
+            qfact=10
+            ax.quiver((x[::qfact,::qfact]-x0)/dx,(y[::qfact,::qfact]-y0)/dy,u_norm[::qfact,::qfact]
+                      ,v_norm[::qfact,::qfact],angles='xy', scale=30,color='k',width=0.004)
+            ax.set_xticks(ticks = ax.get_xticks()[1:-1:3],labels = tickx0[1:-1:3])
+            ax.set_yticklabels(ticky0)
+            ax.invert_yaxis()
+            ax.set_ylabel("Y/D",fontsize= settings.label_size)
+            ax.set_xlabel("X/D",fontsize= settings.label_size)
+            ax.tick_params(axis='both', labelsize=settings.tick_size)
+            #plt.title("U(m/s)")
+            cbar=fig.colorbar(img2)
+            cbar.set_label("U(m/s)",rotation=270,labelpad=20,fontsize= settings.label_size)
+            cbar.ax.tick_params(labelsize=settings.label_size)
+            #cbar.set_ticklabels(np.round(cbar.get_ticks(),decimals=1))
+            if save_img=='y':
+                fig.savefig(save_path + 'U' +'_' + str(img_count)+ '.png', bbox_inches='tight',dpi=600)
+
 
         #plt.show()
         #self.plot_interface(v, y[:, 0], X_I, Y_I)
@@ -90,7 +137,7 @@ class InterfaceDetection:
         yf = np.abs(fftshift(fft(quant)))/len(X_out)
         xf = fftshift(fftfreq(len(X_out),dx))"""
 
-        if plot_img=='y':
+        if plot_img=='y' or save_img=='y':
             step = 1
 
             xlayer_plot = ((self.layer_x[:,::step,int(win_cond/2)] - x0) / dx)
@@ -106,6 +153,8 @@ class InterfaceDetection:
             #plt.scatter(self.layer_x[31, :], self.layer_y[31, :], c='r', s=5)
             plt.scatter((X_I - x0) / dx, (Y_I - y0) / dy, c='k', s=5)
             plt.colorbar(sc)
+            if save_img == 'y':
+                plt.savefig(save_path + 'U_w_interface' +'_' + str(img_count)+ '.png', bbox_inches='tight', dpi=600)
 
             plt.subplots()
             plt.imshow(img_proc0)
@@ -115,12 +164,14 @@ class InterfaceDetection:
             # plt.scatter(self.layer_x[31, :], self.layer_y[31, :], c='r', s=5)
             plt.scatter((X_I - x0) / dx, (Y_I - y0) / dy, c='k', s=5)
             plt.colorbar(sc)
+            if save_img == 'y':
+                plt.savefig(save_path + 'U_w_interface_thickness' +'_' + str(img_count)+ '.png', bbox_inches='tight', dpi=600)
 
             """plt.subplots()
             plt.plot(xf[int(len(yf)/2)+1:],yf[int(len(yf)/2)+1:])
             plt.yscale('log')"""
-
-            plt.show()
+            if plot_img=='y':
+                plt.show()
 
     def interpolate_array(self,points,omega,interp_pts,shp_cast):
         omega_val = interpn(points, np.transpose(omega), interp_pts)
@@ -218,7 +269,7 @@ class InterfaceDetection:
                 if added==1:
                     break
 
-        return m, X_out, Y_out,m_2nd
+        return np.array(m), np.array(X_out), np.array(Y_out),np.array(m_2nd)
 
     def search_points(self,x1,y1,dist,slope,fact):
         """

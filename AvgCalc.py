@@ -16,7 +16,11 @@ class AvgCalc:
             loc = DA.header_def(header[i])
             print(loc)
             if i == 0:
-                Avg_samp = np.loadtxt(loc + 'B00001.dat', skiprows=3)
+                try:
+                    Avg_samp = np.loadtxt(loc + "B0001.dat", skiprows=4,max_rows=153720) #replace wiht B00001.dat, skiprows=3 for JIC, 4 for confined jet
+                except:
+                    Avg_samp = np.loadtxt(loc + "B00001.dat", skiprows=3) #replace wiht B00001.dat, skiprows=3 for JIC, 4 for confined jet
+
                 s_avg = Avg_samp.shape
                 Avg_mat = np.zeros(s_avg)
             for inst in range(self.NumImgs[i]):
@@ -25,7 +29,12 @@ class AvgCalc:
         for i in range(header_size):
             loc = DA.header_def(header[i])
             if i == 0:
-                Avg_samp = np.loadtxt(loc + 'B00001.dat', skiprows=3)
+                try:
+                    Avg_samp = np.loadtxt(loc + "B0001.dat", skiprows=4,
+                                          max_rows=153720)  # replace wiht B00001.dat, skiprows=3 for JIC, 4 for confined jet
+                except:
+                    Avg_samp = np.loadtxt(loc + "B00001.dat",
+                                          skiprows=3)  # replace wiht B00001.dat, skiprows=3 for JIC, 4 for confined jet
                 s_avg = Avg_samp.shape
                 rss = np.zeros(s_avg[0])
                 stdv = np.zeros(s_avg)
@@ -48,7 +57,7 @@ class AvgCalc:
         for i in range(header_size):
             loc = DA.header_def(header[i])
             if i == 0:
-                Avg_samp = np.loadtxt(loc + 'B00001.dat', skiprows=3)
+                Avg_samp = np.loadtxt(loc + 'B00001.dat', skiprows=3,max_rows=153720)
                 s_avg = Avg_samp.shape
                 Avg_mat = np.zeros(s_avg)
             for inst in range(self.NumImgs[i]):

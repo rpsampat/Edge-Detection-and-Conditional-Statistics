@@ -7,19 +7,21 @@ import pickle
 import os
 import joblib
 import KE_budget
-
+""" 
+Extract only mean statistics and store a smaller file
+"""
 class Run:
     def __init__(self):
         self.drive = "O:/"
         self.folder = "JetinCoflow_V2/Exported/PIV_5000imgs/"#"Confined Jet/HeatedFlow_P60_phi080_fstop11_dt6.5_f1v1SeqPIV_MPd(3x24x24_75ov_ImgCorr)=unknown/"#"JetinCoflow_V2/Exported/PIV_5000imgs/"
-        self.axial_location='15D'#5D,10D,15D,20D,30D,70D
-        self.start_loc_dict={'5D':-3.5,'10D':1.0,'15D':10.0,'20D':-5.75,'30D':-5.75}#-15.75#10#15#10
-        self.end_loc_dict = {'5D': 61.5, '10D': 49.0, '15D': 30.0, '20D':61.5 , '30D': 61.5}#112.5#40#30#30
+        self.axial_location='30D'#5D,10D,15D,20D,30D,70D
+        self.start_loc_dict={'5D':-3.5,'10D':1.0,'15D':-5.75,'20D':-5.75,'30D':-5.75}#-15.75#10#15#10
+        self.end_loc_dict = {'5D': 61.5, '10D': 49.0, '15D': 61.5, '20D':61.5 , '30D': 140}#112.5#40#30#30
         self.xdist_dict = {'5D': -4.223, '10D': 10.0, '15D': 10.0, '20D': 10.0, '30D': 10.0}
-        self.xdist_abs_dict = {'5D': 0.0, '10D': 85.5, '15D': 154.5, '20D': 226, '30D': 327.5}
+        self.xdist_abs_dict = {'5D': 0.0, '10D': 85.5, '15D': 154.5, '20D': 226, '30D': 308.5}
         self.rpm_coflow =['0','250','375','680']#0,250,375,680
         # should have number of inputs as number of folders for the given rpm and axial location
-        self.num_imgs=[[750,750],[100,100,100],[500,500],[500,500,500]]#[1000,1000]]
+        self.num_imgs=[[2000,2000],[2000,2000],[2000,2000],[2000,2000]]#[1000,1000]]
         self.otsu_fact=[10,8,8,4]
         self.save_folder = "JetinCoflow_V2/Exported/PIV_5000imgs/Conditional_data/"
 
@@ -77,10 +79,13 @@ class Run:
 
     def main(self):
         #for i in range(len(self.rpm_coflow)):
-        i=3
+        rpm_list = [0,250, 375,680]
         otsu_list = [10]
-        for otsu in otsu_list:
-            self.process(self.rpm_coflow[i],self.axial_location,otsu,self.num_imgs[i])
+        for r in rpm_list:
+            i = np.where(np.array(self.rpm_coflow)==str(r))[0][0]
+            print("Rpmcoflow ind=",i)
+            for otsu in otsu_list:
+                self.process(self.rpm_coflow[i],self.axial_location,otsu,self.num_imgs[i])
 
     def main_temp(self):
         settings = Settings.Settings()

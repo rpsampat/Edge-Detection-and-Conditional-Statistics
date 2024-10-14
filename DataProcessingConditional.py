@@ -46,7 +46,7 @@ class DataProcessor_Conditional:
         self.xval2 = {}
         self.yval2 = {}
 
-    def processor(self, settings, header,otsu_fact):
+    def processor(self, settings, header,otsu_fact,save_img,save_img_path):
 
         num_avg = settings.num_inst_avg  # array of number of images used for averaging from each directory
         AC = AvgCalc.AvgCalc(num_avg, settings.start_loc, settings.end_loc, settings.calc_avg, settings.edgedetect, header)
@@ -65,8 +65,9 @@ class DataProcessor_Conditional:
         dy_temp = np.diff(AC.Y, axis=0)
         #dy = dy_temp[0, 0] / 1000  # in m
         VD = VelocityData.VelocityData()
-        num_imgs = settings.num_inst
-        num_inst = np.sum(num_imgs)
+        num_start= np.array(settings.num_start)
+        num_imgs = np.array(settings.num_inst)
+        num_inst = np.sum(num_imgs-num_start)
         ens = Ensemble.Ensemble()
         header_size = header.shape
         loop_count = 0
@@ -80,12 +81,16 @@ class DataProcessor_Conditional:
         self.Y = AC.Y
         self.y_half = np.array([self.Y[y_half_loc[i], i] - self.Y[u_max_loc[i], i] for i in range(len(u_max))])
         vort_fact = self.y_half/self.Uc
+        img_count=0
         for h in range(header_size[0]):
-            for i in range(num_imgs[h]):
+            for i in range(num_start[h],num_imgs[h]):
+                print("Imgnum=",i)
+                print("headernum=",h)
                 S = VD.data_matrix(i, meanU.shape, settings.start_loc, AC, header[h])
+                i = i-num_start[h]
                 if i == 0 and h == 0:
                     jet_interface = InterfaceDetection.InterfaceDetection(meanU, settings.shear_num, settings.m_x_loc,otsu_fact)
-                    jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer, meanU, meanV,win_size,vort_fact)
+                    jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer, meanU, meanV,win_size,vort_fact,save_img, save_img_path, img_count)
                     size_interface = jet_interface.layer_x.shape
                     self.layer_x = np.zeros((size_interface[0], size_interface[1], num_inst,win_size))
                     self.layer_y = np.zeros((size_interface[0], size_interface[1], num_inst,win_size))
@@ -105,7 +110,7 @@ class DataProcessor_Conditional:
                     self.layer_V_engulf = np.zeros((size_engulf[0], size_engulf[1], num_inst, win_size))
                     self.slope_cond_engulf = np.zeros((size_engulf[1], num_inst))
                 try:
-                    jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer,meanU, meanV,win_size,vort_fact)
+                    jet_interface.Detect(VD.U, VD.V, AC.X, AC.Y, settings.layer,meanU, meanV,win_size,vort_fact,save_img, save_img_path, img_count)
                 except:
                     continue
                 shp_curr = np.shape(jet_interface.layer_x)
@@ -200,7 +205,8 @@ class DataProcessor_Conditional:
                     self.layer_V_engulf[:, :, loop_count + i, :] = jet_interface.layer_V[0:size_engulf[0],
                                                             0:size_engulf[1], :]
                     self.slope_cond_engulf[0:shp_curr_engulf[1], loop_count + i] = jet_interface.slope_cond[0:size_engulf[1]]
-            loop_count = loop_count + num_imgs[h]
+                img_count +=1
+            loop_count = loop_count + (num_imgs[h]-num_start[h])
         U_cond = np.mean(self.layer_U, axis=2)
         V_cond = np.mean(self.layer_V, axis=2)
         #self.U = np.array(U_cond)
